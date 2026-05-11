@@ -1,0 +1,20 @@
+{
+  "name": "electronic-retail-business-control-system",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @erc/api dev",
+    "build:api": "pnpm --filter @erc/api build",
+    "start:api": "pnpm --filter @erc/api start",
+    "dev:web": "pnpm --filter @erc/web dev",
+    "build:web": "pnpm --filter @erc/web build",
+    "start:web": "pnpm --filter @erc/web start",
+    "db:generate": "pnpm --filter @erc/db db:generate",
+    "db:migrate": "pnpm --filter @erc/db db:migrate",
+    "db:push": "pnpm --filter @erc/db db:push",
+    "db:studio": "pnpm --filter @erc/db db:studio"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

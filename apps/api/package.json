@@ -1,0 +1,31 @@
+{
+  "name": "@erc/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@erc/db": "workspace:*",
+    "@erc/shared": "workspace:*",
+    "@fastify/cors": "latest",
+    "@fastify/jwt": "latest",
+    "bcryptjs": "latest",
+    "dotenv": "latest",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "latest",
+    "fastify-plugin": "latest",
+    "pdfkit": "^0.18.0",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/pdfkit": "^0.17.6",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,132 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(245, 158, 11, 0.09), transparent 260px),
+    var(--bg);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
+}
+
+.premium-auth-card {
+  border-radius: 22px;
+}
+
+.auth-card-header {
+  padding: 24px 24px 10px;
+}
+
+.auth-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--gold-lt);
+  color: #b45309;
+  display: grid;
+  place-items: center;
+  margin-top: 22px;
+}
+
+.auth-title {
+  font-size: 25px;
+  font-weight: 900;
+  color: var(--gray-900);
+  margin-top: 16px;
+}
+
+.auth-subtitle {
+  margin-top: 8px;
+  color: var(--gray-500);
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.auth-form {
+  padding: 18px 24px 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 13px;
+}
+
+.form-label {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--gray-600);
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--gray-900);
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
+}
+
+.form-error {
+  background: var(--red-lt);
+  color: var(--red);
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-input {
+  padding-right: 45px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 31px;
+  height: 31px;
+  border-radius: var(--r-sm);
+  border: 0;
+  background: transparent;
+  color: var(--gray-400);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}

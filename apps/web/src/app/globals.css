@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@import "../styles/theme.css";
+@import "../styles/landing.css";
+@import "../styles/app-shell.css";
+@import "../styles/dashboard.css";
+@import "../styles/auth.css";
+@import "../styles/staff.css";
