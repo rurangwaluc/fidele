@@ -13,6 +13,7 @@ import { problemsRoutes } from "./modules/problems/problems.routes.js";
 import { productsRoutes } from "./modules/products/products.routes.js";
 import { reportsRoutes } from "./modules/reports/reports.routes.js";
 import { salesRoutes } from "./modules/sales/sales.routes.js";
+import { settingsRoutes } from "./modules/settings/settings.routes.js";
 import { staffRoutes } from "./modules/staff/staff.routes.js";
 
 const app = Fastify({
@@ -87,6 +88,7 @@ await app.register(cashRoutes, { prefix: "/cash" });
 await app.register(expensesRoutes, { prefix: "/expenses" });
 await app.register(reportsRoutes, { prefix: "/reports" });
 await app.register(problemsRoutes, { prefix: "/problems" });
+await app.register(settingsRoutes, { prefix: "/settings" });
 
 const port = Number(process.env.PORT || 5000);
 
