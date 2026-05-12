@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "pnpm --filter @erc/db build && pnpm --filter @erc/shared build && tsc",
+    "start": "node dist/apps/api/src/server.js",
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
