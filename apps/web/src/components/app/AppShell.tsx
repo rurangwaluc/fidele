@@ -128,7 +128,7 @@ const navItems: NavItem[] = [
     permissions: ["problems.view"],
   },
   {
-    href: "#settings-later",
+    href: "/settings",
     label: "Settings",
     icon: Settings,
     permissions: ["settings.update"],
