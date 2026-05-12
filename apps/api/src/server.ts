@@ -18,6 +18,7 @@ import { staffRoutes } from "./modules/staff/staff.routes.js";
 
 const app = Fastify({
   logger: true,
+  ignoreTrailingSlash: true,
 });
 
 function cleanOrigin(origin: string) {

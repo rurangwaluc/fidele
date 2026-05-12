@@ -84,7 +84,7 @@ export type UpdateSystemSettingsInput = {
 };
 
 export async function getSettings(token: string) {
-  return apiRequest<SettingsResponse>("/settings", {
+  return apiRequest<SettingsResponse>("/settings/", {
     method: "GET",
     token,
   });
