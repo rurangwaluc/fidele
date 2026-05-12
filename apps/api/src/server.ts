@@ -19,14 +19,55 @@ const app = Fastify({
   logger: true,
 });
 
+function cleanOrigin(origin: string) {
+  return origin.trim().replace(/\/$/, "");
+}
+
+const defaultAllowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+const envAllowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map(cleanOrigin)
+  .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...defaultAllowedOrigins.map(cleanOrigin),
+  ...envAllowedOrigins,
+]);
+
 await app.register(cors, {
-  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const cleanRequestOrigin = cleanOrigin(origin);
+
+    if (allowedOrigins.has(cleanRequestOrigin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+  },
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 });
 
 await app.register(authPlugin);
+
+app.get("/", async () => {
+  return {
+    ok: true,
+    service: "electronic-retail-control-api",
+    message: "API is running.",
+  };
+});
 
 app.get("/health", async () => {
   return {
@@ -55,7 +96,7 @@ try {
     host: "0.0.0.0",
   });
 
-  console.log(`API running on http://localhost:${port}`);
+  console.log(`API running on port ${port}`);
 } catch (error) {
   app.log.error(error);
   process.exit(1);
