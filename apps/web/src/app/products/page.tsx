@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { AuthUser, getCurrentUser, getToken } from "@/lib/auth";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, MouseEvent, ReactNode } from "react";
 import {
   Product,
   ProductCategory,
@@ -29,9 +29,11 @@ import {
   updateProductDetails,
   updateProductPrices,
 } from "@/lib/products";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
+import styles from "./page.module.css";
 
 type ProductModalMode = "create" | "edit" | "price" | null;
 
@@ -53,12 +55,17 @@ function hasPermission(user: AuthUser | null, permission: string) {
   return user.permissions.includes(permission);
 }
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function ProductsPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [visibleProductsCount, setVisibleProductsCount] = useState(12);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -112,6 +119,13 @@ export default function ProductsPage() {
       ),
     [products],
   );
+
+  const visibleProducts = useMemo(
+    () => products.slice(0, visibleProductsCount),
+    [products, visibleProductsCount],
+  );
+
+  const hasMoreProducts = visibleProductsCount < products.length;
 
   useEffect(() => {
     loadData("");
@@ -175,6 +189,7 @@ export default function ProductsPage() {
       setUser(meResponse.user);
       setProducts(productsResponse.products);
       setCategories(categoriesResponse.categories);
+      setVisibleProductsCount(12);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load products.",
@@ -238,7 +253,7 @@ export default function ProductsPage() {
   }
 
   function toggleActionMenu(
-    event: React.MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLButtonElement>,
     product: Product,
   ) {
     event.stopPropagation();
@@ -433,597 +448,575 @@ export default function ProductsPage() {
 
   return (
     <AppShell title="Products">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <Package size={15} />
-            Product profiles
-          </span>
+      <div className={styles.productsPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <Package size={15} />
+              Product profiles
+            </span>
 
-          <h1>Products</h1>
+            <h1>Products</h1>
 
-          <p>
-            Create and manage product profiles. Product creation does not
-            increase stock. Current stock comes from New Stock Arrivals.
-          </p>
-        </div>
-
-        <div className="dashboard-hero-actions">
-          <button
-            className="btn btn-outline"
-            type="button"
-            onClick={() => loadData(search)}
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-
-          {canCreate ? (
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={openCreateModal}
-            >
-              <Plus size={14} />
-              Create product
-            </button>
-          ) : null}
-        </div>
-      </section>
-
-      <div className="premium-stats-grid">
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Package size={20} />
-            </div>
-            <span className="badge badge-blue">Total</span>
-          </div>
-          <div className="stat-label">Products</div>
-          <div className="stat-value">{products.length}</div>
-          <div className="stat-help">All product profiles in the shop</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Boxes size={20} />
-            </div>
-            <span className="badge badge-green">Stock</span>
-          </div>
-          <div className="stat-label">Total stock units</div>
-          <div className="stat-value">{totalStockUnits}</div>
-          <div className="stat-help">Sellable stock from received arrivals</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <AlertTriangle size={20} />
-            </div>
-            <span className="badge badge-orange">Low stock</span>
-          </div>
-          <div className="stat-label">Low stock alerts</div>
-          <div className="stat-value">{lowStockProducts.length}</div>
-          <div className="stat-help">Products at or below alert quantity</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <PowerOff size={20} />
-            </div>
-            <span className="badge badge-orange">Inactive</span>
-          </div>
-          <div className="stat-label">Inactive products</div>
-          <div className="stat-value">{inactiveProducts.length}</div>
-          <div className="stat-help">Products hidden from normal selling</div>
-        </div>
-      </div>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      <section className="table-card premium-panel">
-        <div className="table-card-header">
-          <div>
-            <div className="table-title">Product list</div>
-            <div className="app-subtitle">
-              Search, create, edit, update prices, activate, and deactivate
-              products.
-            </div>
+            <p>
+              Create and manage product profiles. Product creation does not
+              increase stock. Current stock comes from New Stock Arrivals.
+            </p>
           </div>
 
-          {loading ? (
-            <Loader2
-              className="spin"
-              size={20}
-              style={{ color: "var(--orange)" }}
-            />
-          ) : null}
-        </div>
-
-        <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
-          <form
-            onSubmit={handleSearch}
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <div className="hdr-search" style={{ flex: "1 1 260px" }}>
-              <Search size={14} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search product name, SKU, brand, model..."
-              />
-            </div>
-
-            <button className="btn btn-outline" type="submit">
-              <Search size={14} />
-              Search
-            </button>
-
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
             <button
               className="btn btn-outline"
               type="button"
-              onClick={() => {
-                setSearch("");
-                loadData("");
-              }}
+              onClick={() => loadData(search)}
             >
-              Clear
+              <RefreshCw size={14} />
+              Refresh
             </button>
-          </form>
+
+            {canCreate ? (
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={openCreateModal}
+              >
+                <Plus size={14} />
+                Create product
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            icon={<Package size={20} />}
+            label="Products"
+            value={String(products.length)}
+            help="All product profiles in the shop"
+            badge="Total"
+            badgeClass="badge badge-blue"
+          />
+
+          <MetricCard
+            icon={<CheckCircle2 size={20} />}
+            label="Active products"
+            value={String(activeProducts.length)}
+            help="Products available for normal selling"
+            badge="Active"
+            badgeClass="badge badge-green"
+          />
+
+          <MetricCard
+            icon={<Boxes size={20} />}
+            label="Total stock units"
+            value={String(totalStockUnits)}
+            help="Sellable stock from received arrivals"
+            badge="Stock"
+            badgeClass="badge badge-green"
+          />
+
+          <MetricCard
+            icon={<AlertTriangle size={20} />}
+            label="Low stock alerts"
+            value={String(lowStockProducts.length)}
+            help="Products at or below alert quantity"
+            badge="Low stock"
+            badgeClass="badge badge-orange"
+          />
         </div>
 
-        <div className="tbl-overflow">
-          <table className="simple-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Current stock</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Action</th>
-              </tr>
-            </thead>
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <div
-                        className="feature-icon"
-                        style={{
-                          marginBottom: 0,
-                          width: 42,
-                          height: 42,
-                          borderRadius: 12,
-                        }}
-                      >
+        <section className={`table-card premium-panel ${styles.listPanel}`}>
+          <div className="table-card-header">
+            <div>
+              <div className="table-title">Product list</div>
+              <div className="app-subtitle">
+                Search, create, edit, update prices, activate, and deactivate
+                products.
+              </div>
+            </div>
+
+            <div className={styles.listHeaderRight}>
+              <span className="badge badge-blue">
+                {products.length} record(s)
+              </span>
+
+              {loading ? (
+                <Loader2
+                  className="spin"
+                  size={20}
+                  style={{ color: "var(--orange)" }}
+                />
+              ) : null}
+            </div>
+          </div>
+
+          <div className={styles.listToolbar}>
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className="hdr-search">
+                <Search size={14} />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search product name, SKU, brand, model..."
+                />
+              </div>
+
+              <button className="btn btn-outline" type="submit">
+                <Search size={14} />
+                Search
+              </button>
+
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  loadData("");
+                }}
+              >
+                Clear
+              </button>
+            </form>
+          </div>
+
+          <div className={styles.productGrid}>
+            {visibleProducts.map((product) => {
+              const isLowStock =
+                product.isActive &&
+                product.currentStock <= product.lowStockAlert;
+
+              return (
+                <article key={product.id} className={styles.productCard}>
+                  <div className={styles.productCardTop}>
+                    <div className={styles.productIdentity}>
+                      <div className={styles.productIcon}>
                         <Package size={19} />
                       </div>
 
                       <div>
-                        <div
-                          style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                        >
-                          {product.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "var(--gray-500)",
-                            fontWeight: 700,
-                            marginTop: 3,
-                          }}
-                        >
+                        <h3>{product.name}</h3>
+                        <p>
                           {product.brand || "No brand"} ·{" "}
                           {product.model || "No model"}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "var(--gray-400)",
-                            fontWeight: 800,
-                            marginTop: 3,
-                          }}
-                        >
-                          SKU: {product.sku}
-                        </div>
+                        </p>
+                        <span>SKU: {product.sku}</span>
                       </div>
                     </div>
-                  </td>
 
-                  <td>
-                    <span className="badge badge-blue">
-                      {product.categoryName || "Uncategorized"}
-                    </span>
-                  </td>
-
-                  <td>
-                    <div style={{ fontWeight: 900, color: "var(--gray-900)" }}>
-                      {formatRwf(product.sellingPriceRwf)}
-                    </div>
-
-                    {canSeeBuyingPrice ? (
-                      <div
-                        style={{
-                          marginTop: 4,
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 3,
-                          fontSize: 11,
-                          color: "var(--gray-400)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        <span>Buying: {formatRwf(product.buyingPriceRwf)}</span>
-                        <span>
-                          Minimum: {formatRwf(product.minSellingPriceRwf)}
-                        </span>
-                      </div>
-                    ) : null}
-                  </td>
-
-                  <td>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 5,
-                      }}
-                    >
-                      <span
-                        className={
-                          product.currentStock <= product.lowStockAlert
-                            ? "badge badge-orange"
-                            : "badge badge-green"
-                        }
-                      >
-                        <Boxes size={12} />
-                        {product.currentStock} in stock
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "var(--gray-400)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        Alert at {product.lowStockAlert}
-                      </span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                      }}
-                    >
-                      <span
-                        className={
-                          product.isActive
-                            ? "badge badge-green"
-                            : "badge badge-orange"
-                        }
-                      >
-                        {product.isActive ? "Active" : "Inactive"}
-                      </span>
-
-                      {product.reviewStatus !== "approved" ? (
-                        <span className="badge badge-orange">
-                          {product.reviewStatus}
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-
-                  <td style={{ textAlign: "right" }}>
                     {canEdit || canUpdatePrice ? (
                       <button
                         type="button"
                         onClick={(event) => toggleActionMenu(event, product)}
-                        className="hdr-icon"
-                        style={{
-                          marginLeft: "auto",
-                          width: 32,
-                          height: 32,
-                        }}
+                        className={styles.cardActionButton}
                         aria-label={`Open actions for ${product.name}`}
                       >
                         <MoreVertical size={16} />
                       </button>
                     ) : (
-                      <span
-                        style={{ color: "var(--gray-400)", fontWeight: 900 }}
-                      >
-                        View only
-                      </span>
+                      <span className={styles.viewOnly}>View only</span>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </div>
 
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div
-                      style={{
-                        padding: 26,
-                        textAlign: "center",
-                        color: "var(--gray-500)",
-                        fontWeight: 800,
-                      }}
+                  <div className={styles.badgeRow}>
+                    <span className="badge badge-blue">
+                      {product.categoryName || "Uncategorized"}
+                    </span>
+
+                    <span
+                      className={
+                        product.isActive
+                          ? "badge badge-green"
+                          : "badge badge-orange"
+                      }
                     >
-                      No products found.
+                      {product.isActive ? "Active" : "Inactive"}
+                    </span>
+
+                    {product.reviewStatus !== "approved" ? (
+                      <span className="badge badge-orange">
+                        {product.reviewStatus}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className={styles.productInfoGrid}>
+                    <MiniInfo
+                      label="Selling price"
+                      value={formatRwf(product.sellingPriceRwf)}
+                    />
+
+                    <MiniInfo
+                      label="Current stock"
+                      value={`${product.currentStock} unit(s)`}
+                      tone={isLowStock ? "warning" : "success"}
+                    />
+
+                    <MiniInfo
+                      label="Alert quantity"
+                      value={String(product.lowStockAlert)}
+                    />
+
+                    <MiniInfo
+                      label="Hidden status"
+                      value={`${inactiveProducts.length} inactive`}
+                    />
+                  </div>
+
+                  {canSeeBuyingPrice ? (
+                    <div className={styles.priceProof}>
+                      <div>
+                        <span>Buying price</span>
+                        <strong>{formatRwf(product.buyingPriceRwf)}</strong>
+                      </div>
+
+                      <div>
+                        <span>Minimum selling price</span>
+                        <strong>{formatRwf(product.minSellingPriceRwf)}</strong>
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                  ) : null}
 
-      {actionMenu && menuProduct ? (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            position: "fixed",
-            left: actionMenu.x,
-            top: actionMenu.y,
-            transform:
-              actionMenu.direction === "up" ? "translateY(-100%)" : "none",
-            width: 215,
-            zIndex: 1000,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            boxShadow: "var(--sh-lg)",
-            padding: 6,
-          }}
-        >
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={() => openEditModal(menuProduct)}
-              className="staff-menu-item"
-            >
-              <Pencil size={15} />
-              Edit details
-            </button>
-          ) : null}
+                  {product.warrantyText || product.description ? (
+                    <div className={styles.productNotes}>
+                      {product.warrantyText ? (
+                        <span>Warranty: {product.warrantyText}</span>
+                      ) : null}
+                      {product.description ? (
+                        <span>{product.description}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
 
-          {canUpdatePrice ? (
-            <button
-              type="button"
-              onClick={() => openPriceModal(menuProduct)}
-              className="staff-menu-item"
-            >
-              <BadgeDollarSign size={15} />
-              Update prices
-            </button>
-          ) : null}
-
-          {canEdit ? (
-            <>
-              <div
-                style={{
-                  height: 1,
-                  background: "var(--border)",
-                  margin: "6px 0",
-                }}
-              />
-
-              {menuProduct.isActive ? (
-                <button
-                  type="button"
-                  onClick={() => handleDeactivate(menuProduct)}
-                  className="staff-menu-item danger"
-                >
-                  <PowerOff size={15} />
-                  Deactivate
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleActivate(menuProduct)}
-                  className="staff-menu-item success"
-                >
-                  <Power size={15} />
-                  Activate
-                </button>
-              )}
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {modalMode ? (
-        <div className="staff-modal-backdrop">
-          <div className="staff-modal">
-            <div className="staff-modal-header">
-              <div>
-                <div className="staff-modal-icon">
-                  {modalMode === "price" ? (
-                    <BadgeDollarSign size={22} />
-                  ) : modalMode === "edit" ? (
-                    <Pencil size={22} />
-                  ) : (
-                    <Package size={22} />
-                  )}
-                </div>
-
-                <h2>{modalTitle}</h2>
-                <p>{modalDescription}</p>
+            {products.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Package size={22} />
+                <strong>No products found</strong>
+                <span>
+                  Create a product profile first. Stock quantity will be added
+                  later from New Stock Arrivals.
+                </span>
               </div>
-
-              <button
-                type="button"
-                onClick={closeModal}
-                className="staff-modal-close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {modalMode === "create" ? (
-              <form onSubmit={handleCreateProduct} className="staff-modal-body">
-                <ProductForm
-                  name={name}
-                  sku={sku}
-                  categoryName={categoryName}
-                  brand={brand}
-                  model={model}
-                  description={description}
-                  buyingPriceRwf={buyingPriceRwf}
-                  sellingPriceRwf={sellingPriceRwf}
-                  minSellingPriceRwf={minSellingPriceRwf}
-                  lowStockAlert={lowStockAlert}
-                  warrantyText={warrantyText}
-                  categories={categories}
-                  setName={setName}
-                  setSku={setSku}
-                  setCategoryName={setCategoryName}
-                  setBrand={setBrand}
-                  setModel={setModel}
-                  setDescription={setDescription}
-                  setBuyingPriceRwf={setBuyingPriceRwf}
-                  setSellingPriceRwf={setSellingPriceRwf}
-                  setMinSellingPriceRwf={setMinSellingPriceRwf}
-                  setLowStockAlert={setLowStockAlert}
-                  setWarrantyText={setWarrantyText}
-                  includeSku
-                  includePrices
-                />
-
-                <ModalFooter
-                  onCancel={closeModal}
-                  saving={saving}
-                  label="Create product"
-                />
-              </form>
-            ) : null}
-
-            {modalMode === "edit" ? (
-              <form onSubmit={handleUpdateProduct} className="staff-modal-body">
-                <ProductForm
-                  name={name}
-                  sku={sku}
-                  categoryName={categoryName}
-                  brand={brand}
-                  model={model}
-                  description={description}
-                  buyingPriceRwf={buyingPriceRwf}
-                  sellingPriceRwf={sellingPriceRwf}
-                  minSellingPriceRwf={minSellingPriceRwf}
-                  lowStockAlert={lowStockAlert}
-                  warrantyText={warrantyText}
-                  categories={categories}
-                  setName={setName}
-                  setSku={setSku}
-                  setCategoryName={setCategoryName}
-                  setBrand={setBrand}
-                  setModel={setModel}
-                  setDescription={setDescription}
-                  setBuyingPriceRwf={setBuyingPriceRwf}
-                  setSellingPriceRwf={setSellingPriceRwf}
-                  setMinSellingPriceRwf={setMinSellingPriceRwf}
-                  setLowStockAlert={setLowStockAlert}
-                  setWarrantyText={setWarrantyText}
-                />
-
-                <ModalFooter
-                  onCancel={closeModal}
-                  saving={saving}
-                  label="Save changes"
-                />
-              </form>
-            ) : null}
-
-            {modalMode === "price" ? (
-              <form onSubmit={handleUpdatePrices} className="staff-modal-body">
-                <div className="staff-form-grid">
-                  <label className="staff-form-group">
-                    <span>Buying price</span>
-                    <input
-                      type="number"
-                      value={buyingPriceRwf}
-                      onChange={(event) =>
-                        setBuyingPriceRwf(event.target.value)
-                      }
-                      min={0}
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Selling price</span>
-                    <input
-                      type="number"
-                      value={sellingPriceRwf}
-                      onChange={(event) =>
-                        setSellingPriceRwf(event.target.value)
-                      }
-                      min={0}
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Minimum selling price</span>
-                    <input
-                      type="number"
-                      value={minSellingPriceRwf}
-                      onChange={(event) =>
-                        setMinSellingPriceRwf(event.target.value)
-                      }
-                      min={0}
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Reason</span>
-                    <input
-                      value={priceReason}
-                      onChange={(event) => setPriceReason(event.target.value)}
-                      placeholder="Example: Market price update"
-                    />
-                  </label>
-                </div>
-
-                <ModalFooter
-                  onCancel={closeModal}
-                  saving={saving}
-                  label="Update prices"
-                />
-              </form>
             ) : null}
           </div>
-        </div>
-      ) : null}
+
+          {hasMoreProducts ? (
+            <div className={styles.loadMoreBox}>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() =>
+                  setVisibleProductsCount((current) => current + 12)
+                }
+              >
+                Load more products
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        {actionMenu && menuProduct ? (
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              position: "fixed",
+              left: actionMenu.x,
+              top: actionMenu.y,
+              transform:
+                actionMenu.direction === "up" ? "translateY(-100%)" : "none",
+              width: 215,
+              zIndex: 1000,
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              boxShadow: "var(--sh-lg)",
+              padding: 6,
+            }}
+          >
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => openEditModal(menuProduct)}
+                className="staff-menu-item"
+              >
+                <Pencil size={15} />
+                Edit details
+              </button>
+            ) : null}
+
+            {canUpdatePrice ? (
+              <button
+                type="button"
+                onClick={() => openPriceModal(menuProduct)}
+                className="staff-menu-item"
+              >
+                <BadgeDollarSign size={15} />
+                Update prices
+              </button>
+            ) : null}
+
+            {canEdit ? (
+              <>
+                <div
+                  style={{
+                    height: 1,
+                    background: "var(--border)",
+                    margin: "6px 0",
+                  }}
+                />
+
+                {menuProduct.isActive ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeactivate(menuProduct)}
+                    className="staff-menu-item danger"
+                  >
+                    <PowerOff size={15} />
+                    Deactivate
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleActivate(menuProduct)}
+                    className="staff-menu-item success"
+                  >
+                    <Power size={15} />
+                    Activate
+                  </button>
+                )}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        {modalMode ? (
+          <div className="staff-modal-backdrop">
+            <div className="staff-modal">
+              <div className="staff-modal-header">
+                <div>
+                  <div className="staff-modal-icon">
+                    {modalMode === "price" ? (
+                      <BadgeDollarSign size={22} />
+                    ) : modalMode === "edit" ? (
+                      <Pencil size={22} />
+                    ) : (
+                      <Package size={22} />
+                    )}
+                  </div>
+
+                  <h2>{modalTitle}</h2>
+                  <p>{modalDescription}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="staff-modal-close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {modalMode === "create" ? (
+                <form
+                  onSubmit={handleCreateProduct}
+                  className="staff-modal-body"
+                >
+                  <ProductForm
+                    name={name}
+                    sku={sku}
+                    categoryName={categoryName}
+                    brand={brand}
+                    model={model}
+                    description={description}
+                    buyingPriceRwf={buyingPriceRwf}
+                    sellingPriceRwf={sellingPriceRwf}
+                    minSellingPriceRwf={minSellingPriceRwf}
+                    lowStockAlert={lowStockAlert}
+                    warrantyText={warrantyText}
+                    categories={categories}
+                    setName={setName}
+                    setSku={setSku}
+                    setCategoryName={setCategoryName}
+                    setBrand={setBrand}
+                    setModel={setModel}
+                    setDescription={setDescription}
+                    setBuyingPriceRwf={setBuyingPriceRwf}
+                    setSellingPriceRwf={setSellingPriceRwf}
+                    setMinSellingPriceRwf={setMinSellingPriceRwf}
+                    setLowStockAlert={setLowStockAlert}
+                    setWarrantyText={setWarrantyText}
+                    includeSku
+                    includePrices
+                  />
+
+                  <ModalFooter
+                    onCancel={closeModal}
+                    saving={saving}
+                    label="Create product"
+                  />
+                </form>
+              ) : null}
+
+              {modalMode === "edit" ? (
+                <form
+                  onSubmit={handleUpdateProduct}
+                  className="staff-modal-body"
+                >
+                  <ProductForm
+                    name={name}
+                    sku={sku}
+                    categoryName={categoryName}
+                    brand={brand}
+                    model={model}
+                    description={description}
+                    buyingPriceRwf={buyingPriceRwf}
+                    sellingPriceRwf={sellingPriceRwf}
+                    minSellingPriceRwf={minSellingPriceRwf}
+                    lowStockAlert={lowStockAlert}
+                    warrantyText={warrantyText}
+                    categories={categories}
+                    setName={setName}
+                    setSku={setSku}
+                    setCategoryName={setCategoryName}
+                    setBrand={setBrand}
+                    setModel={setModel}
+                    setDescription={setDescription}
+                    setBuyingPriceRwf={setBuyingPriceRwf}
+                    setSellingPriceRwf={setSellingPriceRwf}
+                    setMinSellingPriceRwf={setMinSellingPriceRwf}
+                    setLowStockAlert={setLowStockAlert}
+                    setWarrantyText={setWarrantyText}
+                  />
+
+                  <ModalFooter
+                    onCancel={closeModal}
+                    saving={saving}
+                    label="Save changes"
+                  />
+                </form>
+              ) : null}
+
+              {modalMode === "price" ? (
+                <form
+                  onSubmit={handleUpdatePrices}
+                  className="staff-modal-body"
+                >
+                  <div className="staff-form-grid">
+                    <label className="staff-form-group">
+                      <span>Buying price</span>
+                      <input
+                        type="number"
+                        value={buyingPriceRwf}
+                        onChange={(event) =>
+                          setBuyingPriceRwf(event.target.value)
+                        }
+                        min={0}
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Selling price</span>
+                      <input
+                        type="number"
+                        value={sellingPriceRwf}
+                        onChange={(event) =>
+                          setSellingPriceRwf(event.target.value)
+                        }
+                        min={0}
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Minimum selling price</span>
+                      <input
+                        type="number"
+                        value={minSellingPriceRwf}
+                        onChange={(event) =>
+                          setMinSellingPriceRwf(event.target.value)
+                        }
+                        min={0}
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Reason</span>
+                      <input
+                        value={priceReason}
+                        onChange={(event) => setPriceReason(event.target.value)}
+                        placeholder="Example: Market price update"
+                      />
+                    </label>
+                  </div>
+
+                  <ModalFooter
+                    onCancel={closeModal}
+                    saving={saving}
+                    label="Update prices"
+                  />
+                </form>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type MiniInfoProps = {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning";
+};
+
+function MiniInfo({ label, value, tone = "default" }: MiniInfoProps) {
+  return (
+    <div
+      className={cx(
+        styles.miniInfo,
+        tone === "success" && styles.miniInfoSuccess,
+        tone === "warning" && styles.miniInfoWarning,
+      )}
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 

@@ -26,6 +26,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app/AppShell";
 import { getToken } from "@/lib/auth";
+import styles from "./page.module.css";
 
 function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
@@ -41,6 +42,11 @@ function formatDate(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function cleanLabel(value: string | null | undefined) {
+  if (!value) return "Not set";
+  return value.replaceAll("_", " ");
 }
 
 export default function SaleDetailsPage() {
@@ -65,7 +71,18 @@ export default function SaleDetailsPage() {
     [items],
   );
 
+  const paymentTotal = useMemo(
+    () =>
+      payments.reduce(
+        (sum, payment) => sum + Number(payment.amountRwf || 0),
+        0,
+      ),
+    [payments],
+  );
+
   const debt = debts[0] || null;
+  const fullyPaid = Number(sale?.balanceRwf || 0) <= 0;
+  const hasInstallments = installments.length > 0;
 
   useEffect(() => {
     if (!saleId) return;
@@ -103,212 +120,194 @@ export default function SaleDetailsPage() {
 
   return (
     <AppShell title="Sale Details">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <ReceiptText size={15} />
-            Sale record
-          </span>
+      <div className={styles.page}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <ReceiptText size={15} />
+              Sale record
+            </span>
 
-          <h1>{sale?.saleNumber || "Sale details"}</h1>
+            <h1>{sale?.saleNumber || "Sale details"}</h1>
 
-          <p>
-            Full proof of the sale: customer, products sold, amount paid,
-            remaining balance, debt, and installment schedule.
-          </p>
-        </div>
-
-        <div className="dashboard-hero-actions">
-          <button
-            className="btn btn-outline"
-            type="button"
-            onClick={() => router.push("/sales")}
-          >
-            <ArrowLeft size={14} />
-            Back to sales
-          </button>
-
-          <button
-            className="btn btn-outline"
-            type="button"
-            onClick={() => {
-              if (saleId) loadSale(saleId);
-            }}
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-        </div>
-      </section>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="loading-card">
-          <Loader2 className="spin" size={18} />
-          <div>
-            <strong>Loading sale...</strong>
-            <p>Checking sale details.</p>
-          </div>
-        </div>
-      ) : null}
-
-      {!loading && sale ? (
-        <>
-          <div className="premium-stats-grid">
-            <div className="premium-stat-card">
-              <div className="stat-card-top">
-                <div className="feature-icon">
-                  <ShoppingCart size={20} />
-                </div>
-                <span className="badge badge-blue">Total</span>
-              </div>
-              <div className="stat-label">Sale total</div>
-              <div className="stat-value" style={{ fontSize: 24 }}>
-                {formatRwf(sale.totalAmountRwf)}
-              </div>
-              <div className="stat-help">Total value of products sold</div>
-            </div>
-
-            <div className="premium-stat-card">
-              <div className="stat-card-top">
-                <div className="feature-icon">
-                  <CheckCircle2 size={20} />
-                </div>
-                <span className="badge badge-green">Paid</span>
-              </div>
-              <div className="stat-label">Amount paid</div>
-              <div className="stat-value" style={{ fontSize: 24 }}>
-                {formatRwf(sale.amountPaidRwf)}
-              </div>
-              <div className="stat-help">Money received for this sale</div>
-            </div>
-
-            <div className="premium-stat-card">
-              <div className="stat-card-top">
-                <div className="feature-icon">
-                  <WalletCards size={20} />
-                </div>
-                <span
-                  className={
-                    sale.balanceRwf > 0
-                      ? "badge badge-orange"
-                      : "badge badge-green"
-                  }
-                >
-                  Balance
-                </span>
-              </div>
-              <div className="stat-label">Remaining balance</div>
-              <div className="stat-value" style={{ fontSize: 24 }}>
-                {formatRwf(sale.balanceRwf)}
-              </div>
-              <div className="stat-help">
-                {sale.balanceRwf > 0
-                  ? "Customer still owes money"
-                  : "Fully paid"}
-              </div>
-            </div>
-
-            <div className="premium-stat-card">
-              <div className="stat-card-top">
-                <div className="feature-icon">
-                  <Package size={20} />
-                </div>
-                <span className="badge badge-blue">Items</span>
-              </div>
-              <div className="stat-label">Quantity sold</div>
-              <div className="stat-value">{totalQuantity}</div>
-              <div className="stat-help">Total units removed from stock</div>
-            </div>
+            <p>
+              Full proof of the sale: customer, products sold, amount paid,
+              remaining balance, debt, and installment schedule.
+            </p>
           </div>
 
-          <div className="dashboard-grid">
-            <section className="table-card premium-panel">
-              <div className="table-card-header">
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => router.push("/sales")}
+            >
+              <ArrowLeft size={14} />
+              Back to sales
+            </button>
+
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => {
+                if (saleId) loadSale(saleId);
+              }}
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+          </div>
+        </section>
+
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
+        {loading ? (
+          <div className="loading-card">
+            <Loader2 className="spin" size={18} />
+            <div>
+              <strong>Loading sale...</strong>
+              <p>Checking sale details.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && sale ? (
+          <>
+            <section className={styles.proofPanel}>
+              <div className={styles.proofMain}>
+                <div className={styles.proofIcon}>
+                  {fullyPaid ? (
+                    <CheckCircle2 size={24} />
+                  ) : (
+                    <WalletCards size={24} />
+                  )}
+                </div>
+
                 <div>
-                  <div className="table-title">Customer and payment</div>
-                  <div className="app-subtitle">
-                    Who bought, who sold, and payment state.
+                  <span>Sale proof</span>
+                  <strong>
+                    {fullyPaid
+                      ? "This sale is fully paid"
+                      : "This customer still has a balance"}
+                  </strong>
+                  <p>
+                    {sale.customerName || sale.walkInName || "Walk-in customer"}{" "}
+                    · Created {formatDate(sale.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              <span
+                className={
+                  fullyPaid ? "badge badge-green" : "badge badge-orange"
+                }
+              >
+                {fullyPaid ? "Fully paid" : "Balance left"}
+              </span>
+            </section>
+
+            <div className={styles.metricsGrid}>
+              <MetricCard
+                icon={<ShoppingCart size={20} />}
+                label="Sale total"
+                value={formatRwf(sale.totalAmountRwf)}
+                help="Total value of products sold"
+                badge="Total"
+                badgeClass="badge badge-blue"
+              />
+
+              <MetricCard
+                icon={<CheckCircle2 size={20} />}
+                label="Amount paid"
+                value={formatRwf(sale.amountPaidRwf)}
+                help="Money received for this sale"
+                badge="Paid"
+                badgeClass="badge badge-green"
+              />
+
+              <MetricCard
+                icon={<WalletCards size={20} />}
+                label="Remaining balance"
+                value={formatRwf(sale.balanceRwf)}
+                help={fullyPaid ? "Fully paid" : "Customer still owes money"}
+                badge="Balance"
+                badgeClass={
+                  fullyPaid ? "badge badge-green" : "badge badge-orange"
+                }
+              />
+
+              <MetricCard
+                icon={<Package size={20} />}
+                label="Quantity sold"
+                value={String(totalQuantity)}
+                help="Total units removed from stock"
+                badge="Items"
+                badgeClass="badge badge-blue"
+              />
+            </div>
+
+            <div className={styles.mainGrid}>
+              <section className="table-card premium-panel">
+                <div className="table-card-header">
+                  <div>
+                    <div className="table-title">Customer and payment</div>
+                    <div className="app-subtitle">
+                      Who bought, who sold, and payment state.
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="attention-list">
-                <div className="attention-item">
-                  <User size={17} />
-                  <div>
+                <div className={styles.infoList}>
+                  <InfoCard icon={<User size={17} />}>
                     <strong>
                       {sale.customerName ||
                         sale.walkInName ||
                         "Walk-in customer"}
                     </strong>
                     <span>{sale.customerPhone || "No phone recorded"}</span>
-                    <span>Customer type: {sale.customerType}</span>
-                  </div>
-                </div>
+                    <span>Customer type: {cleanLabel(sale.customerType)}</span>
+                  </InfoCard>
 
-                <div className="attention-item">
-                  <ShoppingCart size={17} />
-                  <div>
+                  <InfoCard icon={<ShoppingCart size={17} />}>
                     <strong>Sold by {sale.soldByName || "Unknown user"}</strong>
                     <span>Created at {formatDate(sale.createdAt)}</span>
-                    <span>Status: {sale.status}</span>
-                  </div>
-                </div>
+                    <span>Status: {cleanLabel(sale.status)}</span>
+                  </InfoCard>
 
-                <div className="attention-item">
-                  <Clock size={17} />
-                  <div>
+                  <InfoCard icon={<Clock size={17} />}>
                     <strong>Expected payment</strong>
                     <span>{formatDate(sale.expectedPaymentAt)}</span>
-                    <span>Payment status: {sale.paymentStatus}</span>
-                  </div>
-                </div>
+                    <span>
+                      Payment status: {cleanLabel(sale.paymentStatus)}
+                    </span>
+                  </InfoCard>
 
-                {sale.notes ? (
-                  <div className="attention-item">
-                    <ReceiptText size={17} />
-                    <div>
+                  {sale.notes ? (
+                    <InfoCard icon={<ReceiptText size={17} />}>
                       <strong>Sale notes</strong>
                       <span>{sale.notes}</span>
+                    </InfoCard>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="table-card premium-panel">
+                <div className="table-card-header">
+                  <div>
+                    <div className="table-title">Debt record</div>
+                    <div className="app-subtitle">
+                      Appears when customer did not fully pay.
                     </div>
                   </div>
-                ) : null}
-              </div>
-            </section>
 
-            <section className="table-card premium-panel">
-              <div className="table-card-header">
-                <div>
-                  <div className="table-title">Debt record</div>
-                  <div className="app-subtitle">
-                    Appears when customer did not fully pay.
-                  </div>
+                  {hasInstallments ? (
+                    <span className="badge badge-orange">Installment plan</span>
+                  ) : null}
                 </div>
 
-                {installments.length > 0 ? (
-                  <span className="badge badge-orange">Installment plan</span>
-                ) : null}
-              </div>
-
-              <div className="attention-list">
-                {debt ? (
-                  <div className="attention-item">
-                    <WalletCards size={17} />
-                    <div>
+                <div className={styles.infoList}>
+                  {debt ? (
+                    <InfoCard icon={<WalletCards size={17} />}>
                       <strong>
                         {debt.balanceRwf > 0 ? "Open debt" : "Debt cleared"}
                       </strong>
@@ -318,204 +317,239 @@ export default function SaleDetailsPage() {
                       <span>
                         Expected: {formatDate(debt.expectedPaymentAt)}
                       </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="attention-item">
-                    <CheckCircle2 size={17} />
-                    <div>
+                    </InfoCard>
+                  ) : (
+                    <InfoCard icon={<CheckCircle2 size={17} />}>
                       <strong>No debt created</strong>
                       <span>This sale was fully paid at creation time.</span>
+                    </InfoCard>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            {hasInstallments ? (
+              <section className={`table-card premium-panel ${styles.section}`}>
+                <div className="table-card-header">
+                  <div>
+                    <div className="table-title">Installment schedule</div>
+                    <div className="app-subtitle">
+                      Expected payments for this customer debt.
                     </div>
                   </div>
-                )}
-              </div>
-            </section>
-          </div>
+                </div>
 
-          {installments.length > 0 ? (
-            <section
-              className="table-card premium-panel"
-              style={{ marginTop: 18 }}
-            >
+                <div className={styles.installmentGrid}>
+                  {installments.map((installment) => (
+                    <div
+                      key={installment.id}
+                      className={styles.installmentCard}
+                    >
+                      <div className={styles.cardTop}>
+                        <strong>
+                          Installment {installment.installmentNumber}
+                        </strong>
+
+                        <span
+                          className={
+                            installment.balanceRwf <= 0
+                              ? "badge badge-green"
+                              : "badge badge-orange"
+                          }
+                        >
+                          {installment.balanceRwf <= 0
+                            ? "paid"
+                            : cleanLabel(installment.status)}
+                        </span>
+                      </div>
+
+                      <div className={styles.miniGrid}>
+                        <MiniInfo
+                          label="Expected"
+                          value={formatRwf(installment.expectedAmountRwf)}
+                        />
+                        <MiniInfo
+                          label="Paid"
+                          value={formatRwf(installment.amountPaidRwf)}
+                        />
+                        <MiniInfo
+                          label="Balance"
+                          value={formatRwf(installment.balanceRwf)}
+                        />
+                        <MiniInfo
+                          label="Due date"
+                          value={formatDate(installment.dueAt)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className={`table-card premium-panel ${styles.section}`}>
               <div className="table-card-header">
                 <div>
-                  <div className="table-title">Installment schedule</div>
+                  <div className="table-title">Products sold</div>
                   <div className="app-subtitle">
-                    Expected payments for this customer debt.
+                    These items were removed from stock when the sale was saved.
                   </div>
                 </div>
               </div>
 
-              <div className="tbl-overflow">
-                <table className="simple-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Expected amount</th>
-                      <th>Paid</th>
-                      <th>Balance</th>
-                      <th>Due date</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
+              <div className={styles.productGrid}>
+                {items.map((item) => (
+                  <div key={item.id} className={styles.productCard}>
+                    <div className={styles.cardTop}>
+                      <div>
+                        <strong>{item.productNameSnapshot}</strong>
+                        <span>{item.skuSnapshot || "No SKU"}</span>
+                      </div>
 
-                  <tbody>
-                    {installments.map((installment) => (
-                      <tr key={installment.id}>
-                        <td>{installment.installmentNumber}</td>
-                        <td>{formatRwf(installment.expectedAmountRwf)}</td>
-                        <td>{formatRwf(installment.amountPaidRwf)}</td>
-                        <td>{formatRwf(installment.balanceRwf)}</td>
-                        <td>{formatDate(installment.dueAt)}</td>
-                        <td>
-                          <span
-                            className={
-                              installment.balanceRwf <= 0
-                                ? "badge badge-green"
-                                : "badge badge-orange"
-                            }
-                          >
-                            {installment.balanceRwf <= 0
-                              ? "paid"
-                              : installment.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      <span
+                        className={
+                          item.soldBelowMinimum
+                            ? "badge badge-orange"
+                            : "badge badge-blue"
+                        }
+                      >
+                        Min {formatRwf(item.minSellingPriceRwf)}
+                      </span>
+                    </div>
+
+                    <div className={styles.miniGrid}>
+                      <MiniInfo
+                        label="Quantity"
+                        value={String(item.quantity)}
+                      />
+                      <MiniInfo
+                        label="Unit price"
+                        value={formatRwf(item.unitPriceRwf)}
+                      />
+                      <MiniInfo
+                        label="Line total"
+                        value={formatRwf(item.lineTotalRwf)}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
-          ) : null}
 
-          <section
-            className="table-card premium-panel"
-            style={{ marginTop: 18 }}
-          >
-            <div className="table-card-header">
-              <div>
-                <div className="table-title">Products sold</div>
-                <div className="app-subtitle">
-                  These items were removed from stock when the sale was saved.
+            <section className={`table-card premium-panel ${styles.section}`}>
+              <div className="table-card-header">
+                <div>
+                  <div className="table-title">Payments received</div>
+                  <div className="app-subtitle">
+                    Payments recorded during sale creation or later debt
+                    payment.
+                  </div>
                 </div>
+
+                <span className="badge badge-green">
+                  {formatRwf(paymentTotal)}
+                </span>
               </div>
-            </div>
 
-            <div className="tbl-overflow">
-              <table className="simple-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>SKU</th>
-                    <th>Quantity</th>
-                    <th>Unit price</th>
-                    <th>Total</th>
-                    <th>Minimum price</th>
-                  </tr>
-                </thead>
+              <div className={styles.paymentGrid}>
+                {payments.map((payment) => (
+                  <div key={payment.id} className={styles.paymentCard}>
+                    <div className={styles.cardTop}>
+                      <strong>{formatRwf(payment.amountRwf)}</strong>
+                      <span className="badge badge-blue">{payment.method}</span>
+                    </div>
 
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <div
-                          style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                        >
-                          {item.productNameSnapshot}
-                        </div>
-                      </td>
-                      <td>{item.skuSnapshot}</td>
-                      <td>{item.quantity}</td>
-                      <td>{formatRwf(item.unitPriceRwf)}</td>
-                      <td>{formatRwf(item.lineTotalRwf)}</td>
-                      <td>
-                        <span
-                          className={
-                            item.soldBelowMinimum
-                              ? "badge badge-orange"
-                              : "badge badge-blue"
-                          }
-                        >
-                          {formatRwf(item.minSellingPriceRwf)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                    <span>{payment.note || "No note"}</span>
+                    <small>{formatDate(payment.paidAt)}</small>
+                  </div>
+                ))}
 
-          <section
-            className="table-card premium-panel"
-            style={{ marginTop: 18 }}
-          >
-            <div className="table-card-header">
-              <div>
-                <div className="table-title">Payments received</div>
-                <div className="app-subtitle">
-                  Payments recorded during sale creation or later debt payment.
-                </div>
+                {payments.length === 0 ? (
+                  <div className={styles.emptyCard}>
+                    <ReceiptText size={18} />
+                    <strong>No payment received yet</strong>
+                    <span>
+                      Payments will appear here when the customer pays.
+                    </span>
+                  </div>
+                ) : null}
               </div>
-            </div>
+            </section>
 
-            <div className="tbl-overflow">
-              <table className="simple-table">
-                <thead>
-                  <tr>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Note</th>
-                    <th>Paid at</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {payments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>{formatRwf(payment.amountRwf)}</td>
-                      <td>{payment.method}</td>
-                      <td>{payment.note || "No note"}</td>
-                      <td>{formatDate(payment.paidAt)}</td>
-                    </tr>
-                  ))}
-
-                  {payments.length === 0 ? (
-                    <tr>
-                      <td colSpan={4}>
-                        <div
-                          style={{
-                            padding: 24,
-                            textAlign: "center",
-                            color: "var(--gray-500)",
-                            fontWeight: 800,
-                          }}
-                        >
-                          No payment received yet.
-                        </div>
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {installments.length > 0 ? (
-            <div style={{ marginTop: 18 }}>
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => router.push("/debts")}
-              >
-                <CalendarClock size={14} />
-                Manage installment payments
-              </button>
-            </div>
-          ) : null}
-        </>
-      ) : null}
+            {hasInstallments ? (
+              <div className={styles.footerAction}>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={() => router.push("/debts")}
+                >
+                  <CalendarClock size={14} />
+                  Manage installment payments
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type InfoCardProps = {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+};
+
+function InfoCard({ icon, children }: InfoCardProps) {
+  return (
+    <div className={styles.infoCard}>
+      <div className={styles.infoIcon}>{icon}</div>
+      <div className={styles.infoBody}>{children}</div>
+    </div>
+  );
+}
+
+type MiniInfoProps = {
+  label: string;
+  value: string;
+};
+
+function MiniInfo({ label, value }: MiniInfoProps) {
+  return (
+    <div className={styles.miniInfo}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }

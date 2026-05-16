@@ -10,11 +10,12 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   Truck,
   X,
 } from "lucide-react";
 import { AuthUser, getCurrentUser, getToken } from "@/lib/auth";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { Product, getProducts } from "@/lib/products";
 import {
   StockArrival,
@@ -26,9 +27,11 @@ import {
   getStockArrivals,
   getStockMovements,
 } from "@/lib/inventory";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
+import styles from "./page.module.css";
 
 type ArrivalItemForm = {
   rowId: string;
@@ -76,6 +79,10 @@ function makeRow(): ArrivalItemForm {
   };
 }
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function InventoryPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -85,6 +92,10 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [listSearch, setListSearch] = useState("");
+  const [visibleArrivalsCount, setVisibleArrivalsCount] = useState(8);
+  const [visibleMovementsCount, setVisibleMovementsCount] = useState(8);
 
   const [arrivalModalOpen, setArrivalModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -142,6 +153,88 @@ export default function InventoryPage() {
     [arrivals],
   );
 
+  const filteredArrivals = useMemo(() => {
+    const term = listSearch.trim().toLowerCase();
+
+    if (!term) return arrivals;
+
+    return arrivals.filter((arrival) => {
+      const shipmentReferenceValue = (
+        arrival.shipmentReference || ""
+      ).toLowerCase();
+      const referenceCode = (arrival.referenceCode || "").toLowerCase();
+      const source = (arrival.sourceName || "").toLowerCase();
+      const receivedBy = (arrival.receivedByName || "").toLowerCase();
+
+      return (
+        shipmentReferenceValue.includes(term) ||
+        referenceCode.includes(term) ||
+        source.includes(term) ||
+        receivedBy.includes(term)
+      );
+    });
+  }, [arrivals, listSearch]);
+
+  const filteredMovements = useMemo(() => {
+    const term = listSearch.trim().toLowerCase();
+
+    if (!term) return movements;
+
+    return movements.filter((movement) => {
+      const productName = (movement.productName || "").toLowerCase();
+      const reason = (movement.reason || "").toLowerCase();
+      const movementType = (movement.movementType || "").toLowerCase();
+      const actorName = (movement.actorName || "").toLowerCase();
+
+      return (
+        productName.includes(term) ||
+        reason.includes(term) ||
+        movementType.includes(term) ||
+        actorName.includes(term)
+      );
+    });
+  }, [listSearch, movements]);
+
+  const visibleArrivals = useMemo(
+    () => filteredArrivals.slice(0, visibleArrivalsCount),
+    [filteredArrivals, visibleArrivalsCount],
+  );
+
+  const visibleMovements = useMemo(
+    () => filteredMovements.slice(0, visibleMovementsCount),
+    [filteredMovements, visibleMovementsCount],
+  );
+
+  const hasMoreArrivals = visibleArrivalsCount < filteredArrivals.length;
+  const hasMoreMovements = visibleMovementsCount < filteredMovements.length;
+
+  const arrivalFormTotals = useMemo(() => {
+    return items.reduce(
+      (totals, item) => {
+        const quantityReceived = Number(item.quantityReceived || 0);
+        const damagedQuantity = Number(item.damagedQuantity || 0);
+        const unitCost = Number(item.unitCostRwf || 0);
+        const sellableQuantity = Math.max(
+          0,
+          quantityReceived - damagedQuantity,
+        );
+
+        return {
+          received: totals.received + quantityReceived,
+          damaged: totals.damaged + damagedQuantity,
+          sellable: totals.sellable + sellableQuantity,
+          cost: totals.cost + quantityReceived * unitCost,
+        };
+      },
+      {
+        received: 0,
+        damaged: 0,
+        sellable: 0,
+        cost: 0,
+      },
+    );
+  }, [items]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -170,6 +263,8 @@ export default function InventoryPage() {
       setProducts(productsResponse.products);
       setArrivals(arrivalsResponse.arrivals);
       setMovements(movementsResponse.movements);
+      setVisibleArrivalsCount(8);
+      setVisibleMovementsCount(8);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load inventory.",
@@ -325,119 +420,92 @@ export default function InventoryPage() {
 
   return (
     <AppShell title="Stock">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <Truck size={15} />
-            New stock arrivals
-          </span>
+      <div className={styles.inventoryPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <Truck size={15} />
+              New stock arrivals
+            </span>
 
-          <h1>Inventory</h1>
+            <h1>Inventory</h1>
 
-          <p>
-            Record stock received in Kigali, track damaged items on arrival, and
-            keep a clear history of every stock movement.
-          </p>
-        </div>
+            <p>
+              Record stock received in Kigali, track damaged items on arrival,
+              and keep a clear history of every stock movement.
+            </p>
+          </div>
 
-        <div className="dashboard-hero-actions">
-          <button className="btn btn-outline" type="button" onClick={loadData}>
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-
-          {canReceiveStock ? (
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
             <button
-              className="btn btn-primary"
+              className="btn btn-outline"
               type="button"
-              onClick={openArrivalModal}
+              onClick={loadData}
             >
-              <Plus size={14} />
-              Receive stock
+              <RefreshCw size={14} />
+              Refresh
             </button>
-          ) : null}
-        </div>
-      </section>
 
-      <div className="premium-stats-grid">
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Boxes size={20} />
-            </div>
-            <span className="badge badge-blue">Stock</span>
+            {canReceiveStock ? (
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={openArrivalModal}
+              >
+                <Plus size={14} />
+                Receive stock
+              </button>
+            ) : null}
           </div>
-          <div className="stat-label">Total stock units</div>
-          <div className="stat-value">{totalStockQuantity}</div>
-          <div className="stat-help">
-            Sellable stock currently in the system
-          </div>
+        </section>
+
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            icon={<Boxes size={20} />}
+            label="Total stock units"
+            value={String(totalStockQuantity)}
+            help="Sellable stock currently in the system"
+            badge="Stock"
+            badgeClass="badge badge-blue"
+          />
+
+          <MetricCard
+            icon={<Truck size={20} />}
+            label="Received units"
+            value={String(totalArrivalsQuantity)}
+            help="All units recorded through arrivals"
+            badge="Received"
+            badgeClass="badge badge-green"
+          />
+
+          <MetricCard
+            icon={<AlertTriangle size={20} />}
+            label="Damaged on arrival"
+            value={String(totalDamagedOnArrival)}
+            help="Items received but not added to sellable stock"
+            badge="Damaged"
+            badgeClass="badge badge-orange"
+          />
+
+          <MetricCard
+            icon={<CheckCircle2 size={20} />}
+            label="Arrival cost"
+            value={formatRwf(totalArrivalCost)}
+            help="Based on received quantity × unit cost"
+            badge="Cost"
+            badgeClass="badge badge-blue"
+          />
         </div>
 
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Truck size={20} />
-            </div>
-            <span className="badge badge-green">Received</span>
-          </div>
-          <div className="stat-label">Received units</div>
-          <div className="stat-value">{totalArrivalsQuantity}</div>
-          <div className="stat-help">All units recorded through arrivals</div>
-        </div>
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <AlertTriangle size={20} />
-            </div>
-            <span className="badge badge-orange">Damaged</span>
-          </div>
-          <div className="stat-label">Damaged on arrival</div>
-          <div className="stat-value">{totalDamagedOnArrival}</div>
-          <div className="stat-help">
-            Items received but not added to sellable stock
-          </div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <CheckCircle2 size={20} />
-            </div>
-            <span className="badge badge-blue">Cost</span>
-          </div>
-          <div className="stat-label">Arrival cost</div>
-          <div className="stat-value" style={{ fontSize: 24 }}>
-            {formatRwf(totalArrivalCost)}
-          </div>
-          <div className="stat-help">
-            Based on received quantity × unit cost
-          </div>
-        </div>
-      </div>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      <div className="dashboard-grid">
-        <section className="table-card premium-panel">
+        <section className={`table-card premium-panel ${styles.controlPanel}`}>
           <div className="table-card-header">
             <div>
-              <div className="table-title">Stock arrivals</div>
+              <div className="table-title">Inventory control</div>
               <div className="app-subtitle">
-                Every shipment or received stock batch is recorded here.
+                Search stock arrivals and stock movements without horizontal
+                scrolling.
               </div>
             </div>
 
@@ -450,546 +518,673 @@ export default function InventoryPage() {
             ) : null}
           </div>
 
-          <div className="tbl-overflow">
-            <table className="simple-table">
-              <thead>
-                <tr>
-                  <th>Arrival</th>
-                  <th>Items</th>
-                  <th>Damaged</th>
-                  <th>Cost</th>
-                  <th style={{ textAlign: "right" }}>Action</th>
-                </tr>
-              </thead>
+          <div className={styles.toolbar}>
+            <div className="hdr-search">
+              <Search size={14} />
+              <input
+                value={listSearch}
+                onChange={(event) => {
+                  setListSearch(event.target.value);
+                  setVisibleArrivalsCount(8);
+                  setVisibleMovementsCount(8);
+                }}
+                placeholder="Search shipment, product, source, user..."
+              />
+            </div>
 
-              <tbody>
-                {arrivals.map((arrival) => (
-                  <tr key={arrival.id}>
-                    <td>
-                      <div
-                        style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                      >
-                        {arrival.shipmentReference || arrival.referenceCode}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 12,
-                          color: "var(--gray-500)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {arrival.sourceName || "Unknown source"} ·{" "}
-                        {formatDate(arrival.receivedAt)}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 3,
-                          fontSize: 11,
-                          color: "var(--gray-400)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        System ref: {arrival.referenceCode} · Received by{" "}
-                        {arrival.receivedByName || "Unknown user"}
-                      </div>
-                    </td>
-
-                    <td>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 5,
-                        }}
-                      >
-                        <span className="badge badge-blue">
-                          {arrival.itemCount} product(s)
-                        </span>
-                        <span className="badge badge-green">
-                          {arrival.totalQuantityReceived} received
-                        </span>
-                      </div>
-                    </td>
-
-                    <td>
-                      <span
-                        className={
-                          arrival.totalDamagedQuantity > 0
-                            ? "badge badge-orange"
-                            : "badge badge-green"
-                        }
-                      >
-                        {arrival.totalDamagedQuantity} damaged
-                      </span>
-                    </td>
-
-                    <td>
-                      <div
-                        style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                      >
-                        {formatRwf(arrival.totalCostRwf)}
-                      </div>
-                    </td>
-
-                    <td style={{ textAlign: "right" }}>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        type="button"
-                        onClick={() => openArrivalDetails(arrival)}
-                      >
-                        <Eye size={13} />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {arrivals.length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <div
-                        style={{
-                          padding: 24,
-                          textAlign: "center",
-                          color: "var(--gray-500)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        No stock arrivals yet.
-                      </div>
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => {
+                setListSearch("");
+                setVisibleArrivalsCount(8);
+                setVisibleMovementsCount(8);
+              }}
+            >
+              Clear
+            </button>
           </div>
         </section>
 
-        <section className="table-card premium-panel">
-          <div className="table-card-header">
-            <div>
-              <div className="table-title">Recent stock movements</div>
-              <div className="app-subtitle">
-                Proof of how stock changed, who did it, and why.
-              </div>
-            </div>
-          </div>
-
-          <div className="attention-list">
-            {movements.slice(0, 8).map((movement) => (
-              <div key={movement.id} className="attention-item">
-                <Package size={17} />
-                <div>
-                  <strong>{movement.productName}</strong>
-                  <span>
-                    {movement.quantityChange > 0 ? "+" : ""}
-                    {movement.quantityChange} stock · {movement.quantityBefore}{" "}
-                    → {movement.quantityAfter}
-                  </span>
-                  <span>
-                    {movement.reason || movement.movementType} ·{" "}
-                    {movement.actorName || "Unknown user"} ·{" "}
-                    {formatDate(movement.createdAt)}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {movements.length === 0 ? (
-              <div className="attention-item">
-                <Search size={17} />
-                <div>
-                  <strong>No stock movement yet</strong>
-                  <span>Receive stock first to create movement history.</span>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
-      </div>
-
-      {arrivalModalOpen ? (
-        <div className="staff-modal-backdrop">
-          <div className="staff-modal">
-            <div className="staff-modal-header">
+        <div className={styles.mainGrid}>
+          <section className={`table-card premium-panel ${styles.listPanel}`}>
+            <div className="table-card-header">
               <div>
-                <div className="staff-modal-icon">
-                  <Truck size={22} />
+                <div className="table-title">Stock arrivals</div>
+                <div className="app-subtitle">
+                  Every shipment or received stock batch is recorded here.
                 </div>
-
-                <h2>Receive new stock</h2>
-                <p>
-                  Add products received in Kigali. Only sellable quantity
-                  increases stock.
-                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={closeArrivalModal}
-                className="staff-modal-close"
-              >
-                <X size={18} />
-              </button>
+              <span className="badge badge-blue">
+                {filteredArrivals.length} record(s)
+              </span>
             </div>
 
-            <form onSubmit={handleCreateArrival} className="staff-modal-body">
-              <div className="staff-form-grid">
-                <label className="staff-form-group">
-                  <span>Source</span>
-                  <input
-                    value={sourceName}
-                    onChange={(event) => setSourceName(event.target.value)}
-                    placeholder="Example: Dubai shipment"
-                  />
-                </label>
+            <div className={styles.arrivalList}>
+              {visibleArrivals.map((arrival) => (
+                <article key={arrival.id} className={styles.arrivalCard}>
+                  <div className={styles.arrivalTop}>
+                    <div className={styles.arrivalIdentity}>
+                      <div className={styles.cardIcon}>
+                        <Truck size={18} />
+                      </div>
 
-                <label className="staff-form-group">
-                  <span>Shipment reference</span>
-                  <input
-                    value={shipmentReference}
-                    readOnly
-                    placeholder="Auto-generated"
-                  />
-                </label>
-              </div>
+                      <div>
+                        <h3>
+                          {arrival.shipmentReference || arrival.referenceCode}
+                        </h3>
+                        <p>
+                          {arrival.sourceName || "Unknown source"} ·{" "}
+                          {formatDate(arrival.receivedAt)}
+                        </p>
+                        <span>
+                          System ref: {arrival.referenceCode} · Received by{" "}
+                          {arrival.receivedByName || "Unknown user"}
+                        </span>
+                      </div>
+                    </div>
 
-              <label className="staff-form-group">
-                <span>Notes</span>
-                <textarea
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Example: Items received from Dubai by trusted employee."
-                />
-              </label>
-
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    alignItems: "center",
-                    marginBottom: 10,
-                  }}
-                >
-                  <div className="staff-form-section-title">
-                    Products received
+                    <button
+                      className="btn btn-outline btn-sm"
+                      type="button"
+                      onClick={() => openArrivalDetails(arrival)}
+                    >
+                      <Eye size={13} />
+                      View
+                    </button>
                   </div>
 
-                  <button
-                    className="btn btn-outline btn-sm"
-                    type="button"
-                    onClick={addItemRow}
-                  >
-                    <Plus size={13} />
-                    Add product
-                  </button>
-                </div>
+                  <div className={styles.miniGrid}>
+                    <MiniInfo
+                      label="Products"
+                      value={`${arrival.itemCount} product(s)`}
+                    />
 
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                    <MiniInfo
+                      label="Received"
+                      value={`${arrival.totalQuantityReceived} unit(s)`}
+                      tone="success"
+                    />
+
+                    <MiniInfo
+                      label="Damaged"
+                      value={`${arrival.totalDamagedQuantity} damaged`}
+                      tone={
+                        arrival.totalDamagedQuantity > 0 ? "warning" : "success"
+                      }
+                    />
+
+                    <MiniInfo
+                      label="Cost"
+                      value={formatRwf(arrival.totalCostRwf)}
+                    />
+                  </div>
+                </article>
+              ))}
+
+              {filteredArrivals.length === 0 ? (
+                <EmptyCard
+                  icon={<Truck size={19} />}
+                  title="No stock arrivals found"
+                  text="Receive stock first or try another search term."
+                />
+              ) : null}
+            </div>
+
+            {hasMoreArrivals ? (
+              <div className={styles.loadMoreBox}>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() =>
+                    setVisibleArrivalsCount((current) => current + 8)
+                  }
                 >
-                  {items.map((item, index) => {
-                    const product = products.find(
-                      (productItem) => productItem.id === item.productId,
-                    );
+                  Load more arrivals
+                </button>
+              </div>
+            ) : null}
+          </section>
 
-                    const quantityReceived = Number(item.quantityReceived || 0);
-                    const damagedQuantity = Number(item.damagedQuantity || 0);
-                    const sellableQuantity = Math.max(
-                      0,
-                      quantityReceived - damagedQuantity,
-                    );
-                    const totalCost =
-                      quantityReceived * Number(item.unitCostRwf || 0);
-
-                    return (
-                      <div
-                        key={item.rowId}
-                        style={{
-                          border: "1px solid var(--border)",
-                          borderRadius: 14,
-                          padding: 14,
-                          background: "var(--gray-50)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: 10,
-                            marginBottom: 12,
-                          }}
-                        >
-                          <strong style={{ color: "var(--gray-900)" }}>
-                            Item {index + 1}
-                          </strong>
-
-                          <button
-                            type="button"
-                            className="btn btn-red-outline btn-sm"
-                            onClick={() => removeItemRow(item.rowId)}
-                            disabled={items.length === 1}
-                          >
-                            Remove
-                          </button>
-                        </div>
-
-                        <div className="staff-form-grid">
-                          <label className="staff-form-group">
-                            <span>Product</span>
-                            <select
-                              value={item.productId}
-                              onChange={(event) =>
-                                updateItem(
-                                  item.rowId,
-                                  "productId",
-                                  event.target.value,
-                                )
-                              }
-                              required
-                            >
-                              <option value="">Choose product</option>
-                              {activeProducts.map((productItem) => (
-                                <option
-                                  key={productItem.id}
-                                  value={productItem.id}
-                                >
-                                  {productItem.name} · {productItem.sku} ·
-                                  Stock: {productItem.currentStock}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          <label className="staff-form-group">
-                            <span>Quantity received</span>
-                            <input
-                              type="number"
-                              value={item.quantityReceived}
-                              min={1}
-                              onChange={(event) =>
-                                updateItem(
-                                  item.rowId,
-                                  "quantityReceived",
-                                  event.target.value,
-                                )
-                              }
-                              required
-                            />
-                          </label>
-
-                          <label className="staff-form-group">
-                            <span>Damaged quantity</span>
-                            <input
-                              type="number"
-                              value={item.damagedQuantity}
-                              min={0}
-                              onChange={(event) =>
-                                updateItem(
-                                  item.rowId,
-                                  "damagedQuantity",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </label>
-
-                          <label className="staff-form-group">
-                            <span>Unit cost</span>
-                            <input
-                              type="number"
-                              value={item.unitCostRwf}
-                              min={0}
-                              onChange={(event) =>
-                                updateItem(
-                                  item.rowId,
-                                  "unitCostRwf",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </label>
-                        </div>
-
-                        <label
-                          className="staff-form-group"
-                          style={{ marginTop: 12 }}
-                        >
-                          <span>Item note</span>
-                          <input
-                            value={item.note}
-                            onChange={(event) =>
-                              updateItem(item.rowId, "note", event.target.value)
-                            }
-                            placeholder="Example: 2 pieces damaged on arrival"
-                          />
-                        </label>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 8,
-                            marginTop: 12,
-                          }}
-                        >
-                          <span className="badge badge-green">
-                            Sellable: {sellableQuantity}
-                          </span>
-                          <span className="badge badge-orange">
-                            Damaged: {damagedQuantity}
-                          </span>
-                          <span className="badge badge-blue">
-                            Cost: {formatRwf(totalCost)}
-                          </span>
-                          {product ? (
-                            <span className="badge badge-blue">
-                              Current stock: {product.currentStock}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
+          <section className={`table-card premium-panel ${styles.listPanel}`}>
+            <div className="table-card-header">
+              <div>
+                <div className="table-title">Recent stock movements</div>
+                <div className="app-subtitle">
+                  Proof of how stock changed, who did it, and why.
                 </div>
               </div>
 
-              <div className="staff-modal-footer">
+              <span className="badge badge-blue">
+                {filteredMovements.length} record(s)
+              </span>
+            </div>
+
+            <div className={styles.movementList}>
+              {visibleMovements.map((movement) => (
+                <article key={movement.id} className={styles.movementCard}>
+                  <div className={styles.movementTop}>
+                    <div className={styles.cardIcon}>
+                      <Package size={17} />
+                    </div>
+
+                    <div>
+                      <h3>{movement.productName}</h3>
+                      <p>
+                        {movement.quantityChange > 0 ? "+" : ""}
+                        {movement.quantityChange} stock ·{" "}
+                        {movement.quantityBefore} → {movement.quantityAfter}
+                      </p>
+                      <span>
+                        {movement.reason || movement.movementType} ·{" "}
+                        {movement.actorName || "Unknown user"} ·{" "}
+                        {formatDate(movement.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              {filteredMovements.length === 0 ? (
+                <EmptyCard
+                  icon={<Search size={19} />}
+                  title="No stock movement found"
+                  text="Receive stock first or try another search term."
+                />
+              ) : null}
+            </div>
+
+            {hasMoreMovements ? (
+              <div className={styles.loadMoreBox}>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() =>
+                    setVisibleMovementsCount((current) => current + 8)
+                  }
+                >
+                  Load more movements
+                </button>
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        {arrivalModalOpen ? (
+          <div className="staff-modal-backdrop">
+            <div className="staff-modal">
+              <div className="staff-modal-header">
+                <div>
+                  <div className="staff-modal-icon">
+                    <Truck size={22} />
+                  </div>
+
+                  <h2>Receive new stock</h2>
+                  <p>
+                    Add products received in Kigali. Only sellable quantity
+                    increases stock.
+                  </p>
+                </div>
+
                 <button
                   type="button"
                   onClick={closeArrivalModal}
-                  className="staff-btn staff-btn-outline"
+                  className="staff-modal-close"
                 >
-                  Cancel
+                  <X size={18} />
                 </button>
-
-                <AsyncButton loading={saving} type="submit">
-                  <Plus size={15} />
-                  Save stock arrival
-                </AsyncButton>
               </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
 
-      {detailsModalOpen ? (
-        <div className="staff-modal-backdrop">
-          <div className="staff-modal">
-            <div className="staff-modal-header">
-              <div>
-                <div className="staff-modal-icon">
-                  <Eye size={22} />
+              <form onSubmit={handleCreateArrival} className="staff-modal-body">
+                <div className={styles.modalGrid}>
+                  <label className="staff-form-group">
+                    <span>Source</span>
+                    <input
+                      value={sourceName}
+                      onChange={(event) => setSourceName(event.target.value)}
+                      placeholder="Example: Dubai shipment"
+                    />
+                  </label>
+
+                  <label className="staff-form-group">
+                    <span>Shipment reference</span>
+                    <input
+                      value={shipmentReference}
+                      readOnly
+                      placeholder="Auto-generated"
+                    />
+                  </label>
                 </div>
 
-                <h2>Arrival details</h2>
-                <p>
-                  {detailsData.arrival?.shipmentReference ||
-                    detailsData.arrival?.referenceCode ||
-                    "Loading arrival details..."}
-                </p>
-              </div>
+                <label className="staff-form-group">
+                  <span>Notes</span>
+                  <textarea
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Example: Items received from Dubai by trusted employee."
+                  />
+                </label>
 
-              <button
-                type="button"
-                onClick={() => setDetailsModalOpen(false)}
-                className="staff-modal-close"
-              >
-                <X size={18} />
-              </button>
+                <section className={styles.arrivalSummaryBox}>
+                  <div className={styles.summaryHeader}>
+                    <div>
+                      <div className="staff-form-section-title">
+                        Arrival summary
+                      </div>
+                      <p>Check received, damaged, sellable, and total cost.</p>
+                    </div>
+
+                    <span className="badge badge-blue">
+                      {items.length} item row(s)
+                    </span>
+                  </div>
+
+                  <div className={styles.miniGrid}>
+                    <MiniInfo
+                      label="Received"
+                      value={`${arrivalFormTotals.received} unit(s)`}
+                      tone="success"
+                    />
+                    <MiniInfo
+                      label="Sellable"
+                      value={`${arrivalFormTotals.sellable} unit(s)`}
+                      tone="success"
+                    />
+                    <MiniInfo
+                      label="Damaged"
+                      value={`${arrivalFormTotals.damaged} damaged`}
+                      tone={
+                        arrivalFormTotals.damaged > 0 ? "warning" : "success"
+                      }
+                    />
+                    <MiniInfo
+                      label="Cost"
+                      value={formatRwf(arrivalFormTotals.cost)}
+                    />
+                  </div>
+                </section>
+
+                <section>
+                  <div className={styles.sectionTop}>
+                    <div className="staff-form-section-title">
+                      Products received
+                    </div>
+
+                    <button
+                      className="btn btn-outline btn-sm"
+                      type="button"
+                      onClick={addItemRow}
+                    >
+                      <Plus size={13} />
+                      Add product
+                    </button>
+                  </div>
+
+                  <div className={styles.itemStack}>
+                    {items.map((item, index) => {
+                      const product = products.find(
+                        (productItem) => productItem.id === item.productId,
+                      );
+
+                      const quantityReceived = Number(
+                        item.quantityReceived || 0,
+                      );
+                      const damagedQuantity = Number(item.damagedQuantity || 0);
+                      const sellableQuantity = Math.max(
+                        0,
+                        quantityReceived - damagedQuantity,
+                      );
+                      const totalCost =
+                        quantityReceived * Number(item.unitCostRwf || 0);
+
+                      return (
+                        <article key={item.rowId} className={styles.itemCard}>
+                          <div className={styles.itemCardTop}>
+                            <strong>Item {index + 1}</strong>
+
+                            <button
+                              type="button"
+                              className="btn btn-red-outline btn-sm"
+                              onClick={() => removeItemRow(item.rowId)}
+                              disabled={items.length === 1}
+                            >
+                              <Trash2 size={13} />
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className={styles.itemFormGrid}>
+                            <label className="staff-form-group">
+                              <span>Product</span>
+                              <select
+                                value={item.productId}
+                                onChange={(event) =>
+                                  updateItem(
+                                    item.rowId,
+                                    "productId",
+                                    event.target.value,
+                                  )
+                                }
+                                required
+                              >
+                                <option value="">Choose product</option>
+                                {activeProducts.map((productItem) => (
+                                  <option
+                                    key={productItem.id}
+                                    value={productItem.id}
+                                  >
+                                    {productItem.name} · {productItem.sku} ·
+                                    Stock: {productItem.currentStock}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className="staff-form-group">
+                              <span>Quantity received</span>
+                              <input
+                                type="number"
+                                value={item.quantityReceived}
+                                min={1}
+                                onChange={(event) =>
+                                  updateItem(
+                                    item.rowId,
+                                    "quantityReceived",
+                                    event.target.value,
+                                  )
+                                }
+                                required
+                              />
+                            </label>
+
+                            <label className="staff-form-group">
+                              <span>Damaged quantity</span>
+                              <input
+                                type="number"
+                                value={item.damagedQuantity}
+                                min={0}
+                                onChange={(event) =>
+                                  updateItem(
+                                    item.rowId,
+                                    "damagedQuantity",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="staff-form-group">
+                              <span>Unit cost</span>
+                              <input
+                                type="number"
+                                value={item.unitCostRwf}
+                                min={0}
+                                onChange={(event) =>
+                                  updateItem(
+                                    item.rowId,
+                                    "unitCostRwf",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+
+                          <label className="staff-form-group">
+                            <span>Item note</span>
+                            <input
+                              value={item.note}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.rowId,
+                                  "note",
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Example: 2 pieces damaged on arrival"
+                            />
+                          </label>
+
+                          <div className={styles.badgeRow}>
+                            <span className="badge badge-green">
+                              Sellable: {sellableQuantity}
+                            </span>
+                            <span
+                              className={
+                                damagedQuantity > 0
+                                  ? "badge badge-orange"
+                                  : "badge badge-green"
+                              }
+                            >
+                              Damaged: {damagedQuantity}
+                            </span>
+                            <span className="badge badge-blue">
+                              Cost: {formatRwf(totalCost)}
+                            </span>
+                            {product ? (
+                              <span className="badge badge-blue">
+                                Current stock: {product.currentStock}
+                              </span>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <div className="staff-modal-footer">
+                  <button
+                    type="button"
+                    onClick={closeArrivalModal}
+                    className="staff-btn staff-btn-outline"
+                  >
+                    Cancel
+                  </button>
+
+                  <AsyncButton loading={saving} type="submit">
+                    <Plus size={15} />
+                    Save stock arrival
+                  </AsyncButton>
+                </div>
+              </form>
             </div>
+          </div>
+        ) : null}
 
-            <div className="staff-modal-body">
-              {detailsLoading ? (
-                <div className="loading-card">
-                  <Loader2 className="spin" size={18} />
-                  <div>
-                    <strong>Loading arrival...</strong>
-                    <p>Checking received products.</p>
+        {detailsModalOpen ? (
+          <div className="staff-modal-backdrop">
+            <div className="staff-modal">
+              <div className="staff-modal-header">
+                <div>
+                  <div className="staff-modal-icon">
+                    <Eye size={22} />
                   </div>
+
+                  <h2>Arrival details</h2>
+                  <p>
+                    {detailsData.arrival?.shipmentReference ||
+                      detailsData.arrival?.referenceCode ||
+                      "Loading arrival details..."}
+                  </p>
                 </div>
-              ) : (
-                <>
-                  <div className="staff-form-grid">
-                    <div className="premium-stat-card">
-                      <div className="stat-label">Source</div>
-                      <div className="stat-value" style={{ fontSize: 22 }}>
-                        {detailsData.arrival?.sourceName || "Unknown"}
-                      </div>
-                      <div className="stat-help">
-                        {detailsData.arrival?.shipmentReference ||
-                          "No shipment reference"}
-                      </div>
-                    </div>
 
-                    <div className="premium-stat-card">
-                      <div className="stat-label">Received by</div>
-                      <div className="stat-value" style={{ fontSize: 22 }}>
-                        {detailsData.arrival?.receivedByName || "Unknown"}
-                      </div>
-                      <div className="stat-help">
-                        {detailsData.arrival?.receivedAt
-                          ? formatDate(detailsData.arrival.receivedAt)
-                          : ""}
-                      </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsModalOpen(false)}
+                  className="staff-modal-close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="staff-modal-body">
+                {detailsLoading ? (
+                  <div className="loading-card">
+                    <Loader2 className="spin" size={18} />
+                    <div>
+                      <strong>Loading arrival...</strong>
+                      <p>Checking received products.</p>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    <div className={styles.detailsStatsGrid}>
+                      <MetricCard
+                        icon={<Truck size={20} />}
+                        label="Source"
+                        value={detailsData.arrival?.sourceName || "Unknown"}
+                        help={
+                          detailsData.arrival?.shipmentReference ||
+                          "No shipment reference"
+                        }
+                        badge="Source"
+                        badgeClass="badge badge-blue"
+                      />
 
-                  <div className="tbl-overflow">
-                    <table className="simple-table">
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Received</th>
-                          <th>Damaged</th>
-                          <th>Unit cost</th>
-                          <th>Total</th>
-                        </tr>
-                      </thead>
+                      <MetricCard
+                        icon={<CheckCircle2 size={20} />}
+                        label="Received by"
+                        value={detailsData.arrival?.receivedByName || "Unknown"}
+                        help={
+                          detailsData.arrival?.receivedAt
+                            ? formatDate(detailsData.arrival.receivedAt)
+                            : "No date"
+                        }
+                        badge="Receiver"
+                        badgeClass="badge badge-green"
+                      />
+                    </div>
 
-                      <tbody>
-                        {detailsData.items.map((item) => (
-                          <tr key={item.id}>
-                            <td>
-                              <div
-                                style={{
-                                  fontWeight: 900,
-                                  color: "var(--gray-900)",
-                                }}
-                              >
-                                {item.productName}
-                              </div>
-                              <div
-                                style={{
-                                  marginTop: 3,
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  color: "var(--gray-500)",
-                                }}
-                              >
+                    <div className={styles.detailsItemList}>
+                      {detailsData.items.map((item) => (
+                        <article
+                          key={item.id}
+                          className={styles.detailItemCard}
+                        >
+                          <div className={styles.detailItemTop}>
+                            <div className={styles.cardIcon}>
+                              <Package size={17} />
+                            </div>
+
+                            <div>
+                              <h3>{item.productName}</h3>
+                              <p>
                                 {item.brand || "No brand"} ·{" "}
                                 {item.model || "No model"} · {item.sku}
-                              </div>
-                            </td>
+                              </p>
+                            </div>
+                          </div>
 
-                            <td>{item.quantityReceived}</td>
-                            <td>{item.damagedQuantity}</td>
-                            <td>{formatRwf(item.unitCostRwf)}</td>
-                            <td>{formatRwf(item.totalCostRwf)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
+                          <div className={styles.miniGrid}>
+                            <MiniInfo
+                              label="Received"
+                              value={`${item.quantityReceived} unit(s)`}
+                              tone="success"
+                            />
+                            <MiniInfo
+                              label="Damaged"
+                              value={`${item.damagedQuantity} damaged`}
+                              tone={
+                                item.damagedQuantity > 0 ? "warning" : "success"
+                              }
+                            />
+                            <MiniInfo
+                              label="Unit cost"
+                              value={formatRwf(item.unitCostRwf)}
+                            />
+                            <MiniInfo
+                              label="Total"
+                              value={formatRwf(item.totalCostRwf)}
+                            />
+                          </div>
+                        </article>
+                      ))}
+
+                      {detailsData.items.length === 0 ? (
+                        <EmptyCard
+                          icon={<Package size={19} />}
+                          title="No items found"
+                          text="No product item was returned for this stock arrival."
+                        />
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type MiniInfoProps = {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning";
+};
+
+function MiniInfo({ label, value, tone = "default" }: MiniInfoProps) {
+  return (
+    <div
+      className={cx(
+        styles.miniInfo,
+        tone === "success" && styles.miniInfoSuccess,
+        tone === "warning" && styles.miniInfoWarning,
+      )}
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+type EmptyCardProps = {
+  icon: ReactNode;
+  title: string;
+  text: string;
+};
+
+function EmptyCard({ icon, title, text }: EmptyCardProps) {
+  return (
+    <div className={styles.emptyCard}>
+      <div>{icon}</div>
+      <strong>{title}</strong>
+      <span>{text}</span>
+    </div>
   );
 }

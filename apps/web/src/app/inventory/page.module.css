@@ -1,0 +1,506 @@
+.inventoryPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.controlPanel {
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar :global(.hdr-search) {
+  flex: 1 1 260px;
+  width: 100%;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.listPanel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arrivalList,
+.movementList,
+.detailsItemList {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.arrivalCard,
+.movementCard,
+.detailItemCard,
+.itemCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+}
+
+.arrivalTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.arrivalIdentity,
+.movementTop,
+.detailItemTop {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cardIcon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.arrivalIdentity h3,
+.movementTop h3,
+.detailItemTop h3 {
+  margin: 0;
+  color: var(--gray-900);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.arrivalIdentity p,
+.movementTop p,
+.detailItemTop p {
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.arrivalIdentity span,
+.movementTop span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-400);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.miniGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.miniInfo {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 11px;
+}
+
+.miniInfo span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10.5px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.miniInfo strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.miniInfoSuccess {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+}
+
+.miniInfoWarning {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: var(--orange-lt);
+}
+
+.loadMoreBox {
+  padding: 0 16px 16px;
+}
+
+.loadMoreBox :global(.btn) {
+  width: 100%;
+}
+
+.emptyCard {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 26px 16px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  color: var(--gray-500);
+}
+
+.emptyCard div {
+  color: var(--orange);
+}
+
+.emptyCard strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyCard span {
+  max-width: 430px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.modalGrid,
+.detailsStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.arrivalSummaryBox {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(245, 158, 11, 0.1),
+      transparent 36%
+    ),
+    var(--gray-50);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.summaryHeader p {
+  margin-top: 5px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.sectionTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.itemStack {
+  display: grid;
+  gap: 12px;
+}
+
+.itemCard {
+  display: grid;
+  gap: 12px;
+}
+
+.itemCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.itemCardTop strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.itemFormGrid {
+  display: grid;
+  grid-template-columns:
+    minmax(230px, 1.7fr) minmax(120px, 0.75fr) minmax(120px, 0.75fr)
+    minmax(130px, 0.8fr);
+  gap: 14px;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inventoryPage :global(.staff-form-group),
+.inventoryPage :global(.staff-form-group input),
+.inventoryPage :global(.staff-form-group select),
+.inventoryPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+.inventoryPage :global(.staff-form-group textarea) {
+  min-height: 90px;
+}
+
+@media (min-width: 1440px) {
+  .mainGrid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(390px, 0.75fr);
+  }
+
+  .arrivalList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .itemFormGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn) {
+    width: 100%;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .toolbar {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar :global(.btn) {
+    width: 100%;
+  }
+
+  .arrivalList,
+  .movementList,
+  .detailsItemList {
+    padding: 12px;
+  }
+
+  .arrivalCard,
+  .movementCard,
+  .detailItemCard,
+  .itemCard {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .arrivalTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .arrivalTop :global(.btn) {
+    width: 100%;
+  }
+
+  .cardIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .miniGrid,
+  .modalGrid,
+  .detailsStatsGrid,
+  .itemFormGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryHeader,
+  .sectionTop,
+  .itemCardTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summaryHeader :global(.badge) {
+    width: fit-content;
+  }
+
+  .sectionTop :global(.btn),
+  .itemCardTop :global(.btn) {
+    width: 100%;
+  }
+
+  .loadMoreBox {
+    padding: 0 12px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+
+  .badgeRow {
+    gap: 6px;
+  }
+}

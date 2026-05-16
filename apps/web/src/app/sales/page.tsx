@@ -151,6 +151,9 @@ export default function SalesPage() {
     useState<InstallmentFrequency>("weekly");
   const [firstInstallmentDueAt, setFirstInstallmentDueAt] = useState("");
 
+  const [recentSalesSearch, setRecentSalesSearch] = useState("");
+  const [visibleSalesCount, setVisibleSalesCount] = useState(8);
+
   const isCashOpen = cashSession?.status === "open";
 
   const cashMessage = !cashSession
@@ -210,6 +213,33 @@ export default function SalesPage() {
 
   const paidSales = sales.filter((sale) => sale.balanceRwf <= 0);
   const unpaidSales = sales.filter((sale) => sale.balanceRwf > 0);
+
+  const filteredRecentSales = useMemo(() => {
+    const term = recentSalesSearch.trim().toLowerCase();
+
+    if (!term) return sales;
+
+    return sales.filter((sale) => {
+      const saleNumber = sale.saleNumber.toLowerCase();
+      const customerName = (sale.customerName || "").toLowerCase();
+      const walkInNameValue = (sale.walkInName || "").toLowerCase();
+      const soldByName = (sale.soldByName || "").toLowerCase();
+
+      return (
+        saleNumber.includes(term) ||
+        customerName.includes(term) ||
+        walkInNameValue.includes(term) ||
+        soldByName.includes(term)
+      );
+    });
+  }, [recentSalesSearch, sales]);
+
+  const visibleRecentSales = useMemo(
+    () => filteredRecentSales.slice(0, visibleSalesCount),
+    [filteredRecentSales, visibleSalesCount],
+  );
+
+  const hasMoreRecentSales = visibleSalesCount < filteredRecentSales.length;
 
   const installmentPreview = useMemo(() => {
     if (paymentMode !== "installment") return [];
@@ -709,7 +739,7 @@ export default function SalesPage() {
                         >
                           <div>
                             <strong>{customer.name}</strong>
-                            <span>
+                            <span className={styles.customerResultMeta}>
                               {customer.phone || "No phone"} ·{" "}
                               {customer.address || "No address"}
                             </span>
@@ -1175,31 +1205,64 @@ export default function SalesPage() {
               <div>
                 <div className="table-title">Recent sales</div>
                 <div className="app-subtitle">
-                  Click view to open a full sale record.
+                  Search recent sales and open the full sale record.
                 </div>
+              </div>
+
+              <span className="badge badge-blue">
+                {filteredRecentSales.length} record(s)
+              </span>
+            </div>
+
+            <div className={styles.recentTools}>
+              <div className="hdr-search">
+                <Search size={14} />
+                <input
+                  value={recentSalesSearch}
+                  onChange={(event) => {
+                    setRecentSalesSearch(event.target.value);
+                    setVisibleSalesCount(8);
+                  }}
+                  placeholder="Search sale number, customer, or seller..."
+                />
               </div>
             </div>
 
             <div className={styles.recentList}>
-              {sales.slice(0, 10).map((sale) => (
+              {visibleRecentSales.map((sale) => (
                 <div key={sale.id} className={styles.saleCard}>
                   <div className={styles.saleCardIcon}>
                     <ShoppingCart size={17} />
                   </div>
 
                   <div className={styles.saleCardBody}>
-                    <strong>{sale.saleNumber}</strong>
+                    <div className={styles.saleCardTop}>
+                      <strong>{sale.saleNumber}</strong>
+
+                      <span
+                        className={
+                          sale.balanceRwf > 0
+                            ? "badge badge-orange"
+                            : "badge badge-green"
+                        }
+                      >
+                        {sale.balanceRwf > 0 ? "Balance" : "Paid"}
+                      </span>
+                    </div>
+
                     <span>
                       {sale.customerName ||
                         sale.walkInName ||
                         "Walk-in customer"}{" "}
                       · {formatRwf(sale.totalAmountRwf)}
                     </span>
+
                     <span>
                       Paid: {formatRwf(sale.amountPaidRwf)} · Balance:{" "}
-                      {formatRwf(sale.balanceRwf)} · Sold by{" "}
-                      {sale.soldByName || "Unknown"}
+                      {formatRwf(sale.balanceRwf)}
                     </span>
+
+                    <span>Sold by {sale.soldByName || "Unknown"}</span>
 
                     {sale.balanceRwf > 0 ? (
                       <span>
@@ -1219,19 +1282,33 @@ export default function SalesPage() {
                 </div>
               ))}
 
-              {sales.length === 0 ? (
+              {filteredRecentSales.length === 0 ? (
                 <div className={styles.saleCard}>
                   <div className={styles.saleCardIcon}>
                     <Search size={17} />
                   </div>
 
                   <div className={styles.saleCardBody}>
-                    <strong>No sales yet</strong>
-                    <span>Create your first sale from the form.</span>
+                    <strong>No sales found</strong>
+                    <span>
+                      Try another sale number, customer name, or seller name.
+                    </span>
                   </div>
                 </div>
               ) : null}
             </div>
+
+            {hasMoreRecentSales ? (
+              <div className={styles.recentFooter}>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() => setVisibleSalesCount((current) => current + 8)}
+                >
+                  Load more sales
+                </button>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
@@ -1328,11 +1405,6 @@ function ChoiceCard({
   );
 }
 
-type SummaryItemProps = {
-  label: string;
-  value: string;
-};
-
 type SummaryMoneyItemProps = {
   label: string;
   value: string;
@@ -1349,15 +1421,6 @@ function SummaryMoneyItem({ label, value, tone }: SummaryMoneyItemProps) {
         tone === "clear" && styles.summaryMoneyClear,
       )}
     >
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function SummaryItem({ label, value }: SummaryItemProps) {
-  return (
-    <div className={styles.summaryItem}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
