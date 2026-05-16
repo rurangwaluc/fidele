@@ -1,0 +1,587 @@
+.debtsPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.noticeCard {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+}
+
+.noticeContent {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.noticeContent svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+}
+
+.noticeContent strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.noticeContent p {
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.controlPanel,
+.listPanel,
+.planPanel {
+  overflow: hidden;
+}
+
+.controlPanel {
+  margin-bottom: 18px;
+}
+
+.planPanel {
+  margin-top: 18px;
+}
+
+.toolbar {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar :global(.hdr-search) {
+  flex: 1 1 260px;
+  width: 100%;
+}
+
+.debtGrid,
+.planList {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.debtGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.debtCard,
+.planCard,
+.installmentCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+}
+
+.debtCard {
+  display: grid;
+  gap: 14px;
+}
+
+.debtCardTop,
+.planCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.debtIdentity {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cardIcon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.debtIdentity h3 {
+  margin: 0;
+  color: var(--gray-900);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.debtIdentity p {
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.debtIdentity span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-400);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.miniGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.miniInfo {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 11px;
+}
+
+.miniInfo span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10.5px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.miniInfo strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.miniInfoSuccess {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+}
+
+.miniInfoWarning {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: var(--orange-lt);
+}
+
+.nextInstallmentBox {
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.nextInstallmentBox svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+.nextInstallmentBox strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.nextInstallmentBox span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cardFooter :global(.btn) {
+  width: fit-content;
+}
+
+.planList {
+  grid-template-columns: 1fr;
+}
+
+.planCard {
+  display: grid;
+  gap: 14px;
+}
+
+.installmentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.installmentCard {
+  display: grid;
+  gap: 12px;
+  background: var(--card);
+}
+
+.installmentCardPaid {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+}
+
+.installmentCardOverdue {
+  border-color: rgba(249, 115, 22, 0.26);
+  background: var(--orange-lt);
+}
+
+.installmentTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.installmentTop strong {
+  min-width: 0;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.installmentCard :global(.btn) {
+  width: 100%;
+}
+
+.emptyCard {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 26px 16px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  color: var(--gray-500);
+}
+
+.emptyCard div {
+  color: var(--orange);
+}
+
+.emptyCard strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyCard span {
+  max-width: 430px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.loadMoreBox {
+  padding: 0 16px 16px;
+}
+
+.loadMoreBox :global(.btn) {
+  width: 100%;
+}
+
+.selectedInstallmentBox,
+.allocationBox {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.selectedInstallmentBox {
+  background: var(--gold-lt);
+  color: var(--gray-900);
+}
+
+.selectedInstallmentBox strong {
+  display: block;
+  margin-top: 8px;
+  font-weight: 950;
+}
+
+.selectedInstallmentBox span {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-600);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.allocationBox {
+  background: var(--gray-50);
+  color: var(--gray-900);
+}
+
+.allocationBox p {
+  margin-top: 8px;
+  color: var(--gray-500);
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.debtsPage :global(.staff-form-group),
+.debtsPage :global(.staff-form-group input),
+.debtsPage :global(.staff-form-group select),
+.debtsPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .debtGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .installmentGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .debtGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .installmentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn) {
+    width: 100%;
+  }
+
+  .noticeCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .noticeCard :global(.btn) {
+    width: 100%;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .toolbar {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar :global(.btn) {
+    width: 100%;
+  }
+
+  .debtGrid,
+  .planList {
+    padding: 12px;
+  }
+
+  .debtCard,
+  .planCard,
+  .installmentCard {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .debtCardTop,
+  .planCardTop,
+  .installmentTop {
+    flex-direction: column;
+  }
+
+  .debtCardTop :global(.badge),
+  .installmentTop :global(.badge) {
+    width: fit-content;
+  }
+
+  .cardIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .miniGrid,
+  .installmentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardFooter {
+    justify-content: stretch;
+  }
+
+  .cardFooter :global(.btn) {
+    width: 100%;
+  }
+
+  .loadMoreBox {
+    padding: 0 12px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+}

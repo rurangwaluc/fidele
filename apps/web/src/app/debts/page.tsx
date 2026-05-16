@@ -9,6 +9,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  Search,
   WalletCards,
   X,
 } from "lucide-react";
@@ -19,12 +20,14 @@ import {
   getDebts,
   recordDebtPayment,
 } from "@/lib/debts";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
 import { SalePaymentMethod } from "@/lib/sales";
 import { getToken } from "@/lib/auth";
+import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 function formatRwf(value: number) {
@@ -48,6 +51,10 @@ function isOverdue(value: string | null) {
   return new Date(value).getTime() < Date.now();
 }
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function DebtsPage() {
   const router = useRouter();
 
@@ -57,6 +64,11 @@ export default function DebtsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [visibleDebtsCount, setVisibleDebtsCount] = useState(8);
+  const [visibleInstallmentPlansCount, setVisibleInstallmentPlansCount] =
+    useState(6);
 
   const [selectedDebt, setSelectedDebt] = useState<CustomerDebt | null>(null);
   const [selectedInstallment, setSelectedInstallment] =
@@ -109,6 +121,67 @@ export default function DebtsPage() {
     );
   }, [debts]);
 
+  const filteredDebts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return debts;
+
+    return debts.filter((debt) => {
+      const customerName = (debt.customerName || "").toLowerCase();
+      const customerPhone = (debt.customerPhone || "").toLowerCase();
+      const saleNumber = (debt.saleNumber || "").toLowerCase();
+      const status = (debt.status || "").toLowerCase();
+
+      return (
+        customerName.includes(term) ||
+        customerPhone.includes(term) ||
+        saleNumber.includes(term) ||
+        status.includes(term)
+      );
+    });
+  }, [debts, search]);
+
+  const filteredInstallmentDebts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return installmentDebts;
+
+    return installmentDebts.filter((debt) => {
+      const customerName = (debt.customerName || "").toLowerCase();
+      const customerPhone = (debt.customerPhone || "").toLowerCase();
+      const saleNumber = (debt.saleNumber || "").toLowerCase();
+
+      const installmentMatch = (debt.installments || []).some(
+        (installment) =>
+          String(installment.installmentNumber).includes(term) ||
+          (installment.status || "").toLowerCase().includes(term) ||
+          formatDate(installment.dueAt).toLowerCase().includes(term),
+      );
+
+      return (
+        customerName.includes(term) ||
+        customerPhone.includes(term) ||
+        saleNumber.includes(term) ||
+        installmentMatch
+      );
+    });
+  }, [installmentDebts, search]);
+
+  const visibleDebts = useMemo(
+    () => filteredDebts.slice(0, visibleDebtsCount),
+    [filteredDebts, visibleDebtsCount],
+  );
+
+  const visibleInstallmentDebts = useMemo(
+    () => filteredInstallmentDebts.slice(0, visibleInstallmentPlansCount),
+    [filteredInstallmentDebts, visibleInstallmentPlansCount],
+  );
+
+  const hasMoreDebts = visibleDebtsCount < filteredDebts.length;
+
+  const hasMoreInstallmentPlans =
+    visibleInstallmentPlansCount < filteredInstallmentDebts.length;
+
   useEffect(() => {
     loadData();
   }, []);
@@ -128,6 +201,8 @@ export default function DebtsPage() {
 
       setDebts(debtsResponse.debts);
       setCashSession(cashResponse.session);
+      setVisibleDebtsCount(8);
+      setVisibleInstallmentPlansCount(6);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load debts.",
@@ -228,586 +303,621 @@ export default function DebtsPage() {
 
   return (
     <AppShell title="Debts">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <WalletCards size={15} />
-            Customer debts
-          </span>
+      <div className={styles.debtsPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <WalletCards size={15} />
+              Customer debts
+            </span>
 
-          <h1>Pay-later and installments</h1>
+            <h1>Pay-later and installments</h1>
 
-          <p>
-            Track customers who took products and promised to pay later. Record
-            full, partial, or installment payments here.
-          </p>
-        </div>
+            <p>
+              Track customers who took products and promised to pay later.
+              Record full, partial, or installment payments here.
+            </p>
+          </div>
 
-        <div className="dashboard-hero-actions">
-          <button className="btn btn-outline" type="button" onClick={loadData}>
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-
-          {!isCashOpen ? (
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
             <button
-              className="btn btn-primary"
+              className="btn btn-outline"
               type="button"
-              onClick={() => router.push("/cash")}
+              onClick={loadData}
             >
-              <WalletCards size={14} />
-              {cashSession ? "View cash" : "Open cash"}
+              <RefreshCw size={14} />
+              Refresh
             </button>
-          ) : null}
-        </div>
-      </section>
 
-      {!isCashOpen ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 14,
-            alignItems: "center",
-            borderColor: "rgba(245, 158, 11, 0.35)",
-            background: "var(--gold-lt)",
-          }}
-        >
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <AlertTriangle size={20} style={{ color: "var(--orange)" }} />
-            <div>
-              <strong style={{ color: "var(--gray-900)" }}>
-                Payment receiving is blocked
-              </strong>
-              <p
-                style={{
-                  marginTop: 4,
-                  color: "var(--gray-600)",
-                  fontWeight: 750,
-                }}
-              >
-                {cashMessage}
-              </p>
-            </div>
-          </div>
-
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => router.push("/cash")}
-          >
-            <WalletCards size={14} />
-            {cashSession ? "View cash" : "Open cash"}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="premium-stats-grid">
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <WalletCards size={20} />
-            </div>
-            <span className="badge badge-orange">Balance</span>
-          </div>
-          <div className="stat-label">Open balance</div>
-          <div className="stat-value" style={{ fontSize: 24 }}>
-            {formatRwf(totalDebtBalance)}
-          </div>
-          <div className="stat-help">Money customers still owe</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Clock size={20} />
-            </div>
-            <span className="badge badge-orange">Pending</span>
-          </div>
-          <div className="stat-label">Pending debts</div>
-          <div className="stat-value">{pendingDebts.length}</div>
-          <div className="stat-help">Customers who still need to pay</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <CalendarClock size={20} />
-            </div>
-            <span className="badge badge-blue">Plans</span>
-          </div>
-          <div className="stat-label">Installment plans</div>
-          <div className="stat-value">{installmentDebts.length}</div>
-          <div className="stat-help">
-            {overdueInstallments.length} overdue installment(s)
-          </div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <CreditCard size={20} />
-            </div>
-            <span className="badge badge-blue">Total</span>
-          </div>
-          <div className="stat-label">Original debt amount</div>
-          <div className="stat-value" style={{ fontSize: 24 }}>
-            {formatRwf(totalDebtOriginal)}
-          </div>
-          <div className="stat-help">
-            {paidDebts.length} debt record(s) fully cleared
-          </div>
-        </div>
-      </div>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      <section className="table-card premium-panel">
-        <div className="table-card-header">
-          <div>
-            <div className="table-title">Customer debt list</div>
-            <div className="app-subtitle">
-              Record full debt payments or pay specific installments.
-            </div>
-          </div>
-
-          {loading ? (
-            <Loader2
-              className="spin"
-              size={20}
-              style={{ color: "var(--orange)" }}
-            />
-          ) : null}
-        </div>
-
-        <div className="tbl-overflow">
-          <table className="simple-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Sale</th>
-                <th>Debt</th>
-                <th>Plan</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {debts.map((debt) => {
-                const installments = debt.installments || [];
-                const nextInstallment =
-                  installments.find(
-                    (installment) => installment.balanceRwf > 0,
-                  ) || null;
-
-                return (
-                  <tr key={debt.id}>
-                    <td>
-                      <div
-                        style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                      >
-                        {debt.customerName}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 12,
-                          color: "var(--gray-500)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {debt.customerPhone || "No phone"}
-                      </div>
-                    </td>
-
-                    <td>
-                      <span className="badge badge-blue">
-                        {debt.saleNumber || "No sale"}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div
-                        style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                      >
-                        Balance: {formatRwf(debt.balanceRwf)}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 11,
-                          color: "var(--gray-400)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        Original: {formatRwf(debt.originalAmountRwf)} · Paid:{" "}
-                        {formatRwf(debt.amountPaidRwf)}
-                      </div>
-                    </td>
-
-                    <td>
-                      {installments.length > 0 ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 6,
-                          }}
-                        >
-                          <span className="badge badge-orange">
-                            {installments.length} installments
-                          </span>
-
-                          {nextInstallment ? (
-                            <span
-                              style={{
-                                color: "var(--gray-500)",
-                                fontSize: 11,
-                                fontWeight: 800,
-                              }}
-                            >
-                              Next: #{nextInstallment.installmentNumber} ·{" "}
-                              {formatRwf(nextInstallment.balanceRwf)} ·{" "}
-                              {formatDate(nextInstallment.dueAt)}
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                color: "var(--gray-500)",
-                                fontSize: 11,
-                                fontWeight: 800,
-                              }}
-                            >
-                              All installments cleared
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="badge badge-blue">One payment</span>
-                      )}
-                    </td>
-
-                    <td>
-                      <span
-                        className={
-                          debt.balanceRwf > 0
-                            ? "badge badge-orange"
-                            : "badge badge-green"
-                        }
-                      >
-                        {debt.balanceRwf > 0 ? debt.status : "paid"}
-                      </span>
-                    </td>
-
-                    <td style={{ textAlign: "right" }}>
-                      {debt.balanceRwf > 0 ? (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          type="button"
-                          onClick={() => openPaymentModal(debt)}
-                          disabled={!isCashOpen}
-                          style={{
-                            opacity: isCashOpen ? 1 : 0.5,
-                            cursor: isCashOpen ? "pointer" : "not-allowed",
-                          }}
-                        >
-                          <Plus size={13} />
-                          Record payment
-                        </button>
-                      ) : (
-                        <span
-                          style={{ color: "var(--gray-400)", fontWeight: 900 }}
-                        >
-                          Cleared
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {debts.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div
-                      style={{
-                        padding: 24,
-                        textAlign: "center",
-                        color: "var(--gray-500)",
-                        fontWeight: 800,
-                      }}
-                    >
-                      No customer debts yet.
-                    </div>
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="table-card premium-panel" style={{ marginTop: 18 }}>
-        <div className="table-card-header">
-          <div>
-            <div className="table-title">Installment schedules</div>
-            <div className="app-subtitle">
-              Quick view of all installment plans and their payment status.
-            </div>
-          </div>
-        </div>
-
-        <div className="attention-list">
-          {installmentDebts.map((debt) => (
-            <div key={debt.id} className="attention-item">
-              <CalendarClock size={17} />
-              <div style={{ width: "100%" }}>
-                <strong>
-                  {debt.customerName} · {debt.saleNumber || "No sale number"}
-                </strong>
-                <span>
-                  Balance: {formatRwf(debt.balanceRwf)} · Original:{" "}
-                  {formatRwf(debt.originalAmountRwf)}
-                </span>
-
-                <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                  {(debt.installments || []).map((installment) => (
-                    <div
-                      key={installment.id}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "70px 1fr 1fr 1fr auto",
-                        gap: 10,
-                        alignItems: "center",
-                        padding: 10,
-                        border: "1px solid var(--border)",
-                        borderRadius: 12,
-                        background: "var(--card)",
-                      }}
-                    >
-                      <span
-                        style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                      >
-                        #{installment.installmentNumber}
-                      </span>
-
-                      <span
-                        style={{ fontWeight: 800, color: "var(--gray-700)" }}
-                      >
-                        {formatRwf(installment.expectedAmountRwf)}
-                      </span>
-
-                      <span
-                        style={{ fontWeight: 800, color: "var(--gray-500)" }}
-                      >
-                        Balance: {formatRwf(installment.balanceRwf)}
-                      </span>
-
-                      <span
-                        style={{ fontWeight: 800, color: "var(--gray-500)" }}
-                      >
-                        Due: {formatDate(installment.dueAt)}
-                      </span>
-
-                      {installment.balanceRwf > 0 ? (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          type="button"
-                          onClick={() => openPaymentModal(debt, installment)}
-                          disabled={!isCashOpen}
-                          style={{
-                            opacity: isCashOpen ? 1 : 0.5,
-                            cursor: isCashOpen ? "pointer" : "not-allowed",
-                          }}
-                        >
-                          Pay
-                        </button>
-                      ) : (
-                        <span className="badge badge-green">Paid</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {installmentDebts.length === 0 ? (
-            <div className="attention-item">
-              <CheckCircle2 size={17} />
-              <div>
-                <strong>No installment plans yet</strong>
-                <span>Create an installment sale from the Sell page.</span>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {paymentModalOpen && selectedDebt ? (
-        <div className="staff-modal-backdrop">
-          <div className="staff-modal">
-            <div className="staff-modal-header">
-              <div>
-                <div className="staff-modal-icon">
-                  <WalletCards size={22} />
-                </div>
-
-                <h2>Record debt payment</h2>
-                <p>
-                  {selectedDebt.customerName} owes{" "}
-                  {formatRwf(selectedDebt.balanceRwf)}.
-                </p>
-              </div>
-
+            {!isCashOpen ? (
               <button
+                className="btn btn-primary"
                 type="button"
-                onClick={closePaymentModal}
-                className="staff-modal-close"
+                onClick={() => router.push("/cash")}
               >
-                <X size={18} />
+                <WalletCards size={14} />
+                {cashSession ? "View cash" : "Open cash"}
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        {!isCashOpen ? (
+          <NoticeCard
+            title="Payment receiving is blocked"
+            text={cashMessage}
+            actionLabel={cashSession ? "View cash" : "Open cash"}
+            onAction={() => router.push("/cash")}
+          />
+        ) : null}
+
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            icon={<WalletCards size={20} />}
+            label="Open balance"
+            value={formatRwf(totalDebtBalance)}
+            help="Money customers still owe"
+            badge="Balance"
+            badgeClass="badge badge-orange"
+          />
+
+          <MetricCard
+            icon={<Clock size={20} />}
+            label="Pending debts"
+            value={String(pendingDebts.length)}
+            help="Customers who still need to pay"
+            badge="Pending"
+            badgeClass="badge badge-orange"
+          />
+
+          <MetricCard
+            icon={<CalendarClock size={20} />}
+            label="Installment plans"
+            value={String(installmentDebts.length)}
+            help={`${overdueInstallments.length} overdue installment(s)`}
+            badge="Plans"
+            badgeClass="badge badge-blue"
+          />
+
+          <MetricCard
+            icon={<CreditCard size={20} />}
+            label="Original debt amount"
+            value={formatRwf(totalDebtOriginal)}
+            help={`${paidDebts.length} debt record(s) fully cleared`}
+            badge="Total"
+            badgeClass="badge badge-blue"
+          />
+        </div>
+
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
+        <section className={`table-card premium-panel ${styles.controlPanel}`}>
+          <div className="table-card-header">
+            <div>
+              <div className="table-title">Debt control</div>
+              <div className="app-subtitle">
+                Search customer debts and installment plans without horizontal
+                scrolling.
+              </div>
+            </div>
+
+            {loading ? (
+              <Loader2
+                className="spin"
+                size={20}
+                style={{ color: "var(--orange)" }}
+              />
+            ) : null}
+          </div>
+
+          <div className={styles.toolbar}>
+            <div className="hdr-search">
+              <Search size={14} />
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setVisibleDebtsCount(8);
+                  setVisibleInstallmentPlansCount(6);
+                }}
+                placeholder="Search customer, phone, sale number, status..."
+              />
+            </div>
+
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setVisibleDebtsCount(8);
+                setVisibleInstallmentPlansCount(6);
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </section>
+
+        <section className={`table-card premium-panel ${styles.listPanel}`}>
+          <div className="table-card-header">
+            <div>
+              <div className="table-title">Customer debt list</div>
+              <div className="app-subtitle">
+                Record full debt payments or pay specific installments.
+              </div>
+            </div>
+
+            <span className="badge badge-blue">
+              {filteredDebts.length} record(s)
+            </span>
+          </div>
+
+          <div className={styles.debtGrid}>
+            {visibleDebts.map((debt) => {
+              const installments = debt.installments || [];
+              const nextInstallment =
+                installments.find(
+                  (installment) => installment.balanceRwf > 0,
+                ) || null;
+              const isPaid = debt.balanceRwf <= 0;
+
+              return (
+                <article key={debt.id} className={styles.debtCard}>
+                  <div className={styles.debtCardTop}>
+                    <div className={styles.debtIdentity}>
+                      <div className={styles.cardIcon}>
+                        <WalletCards size={18} />
+                      </div>
+
+                      <div>
+                        <h3>{debt.customerName}</h3>
+                        <p>{debt.customerPhone || "No phone"}</p>
+                        <span>{debt.saleNumber || "No sale number"}</span>
+                      </div>
+                    </div>
+
+                    <span
+                      className={
+                        isPaid ? "badge badge-green" : "badge badge-orange"
+                      }
+                    >
+                      {isPaid ? "Paid" : debt.status}
+                    </span>
+                  </div>
+
+                  <div className={styles.miniGrid}>
+                    <MiniInfo
+                      label="Balance"
+                      value={formatRwf(debt.balanceRwf)}
+                      tone={isPaid ? "success" : "warning"}
+                    />
+
+                    <MiniInfo
+                      label="Original"
+                      value={formatRwf(debt.originalAmountRwf)}
+                    />
+
+                    <MiniInfo
+                      label="Paid"
+                      value={formatRwf(debt.amountPaidRwf)}
+                      tone={debt.amountPaidRwf > 0 ? "success" : "default"}
+                    />
+
+                    <MiniInfo
+                      label="Plan"
+                      value={
+                        installments.length > 0
+                          ? `${installments.length} installment(s)`
+                          : "One payment"
+                      }
+                    />
+                  </div>
+
+                  {nextInstallment ? (
+                    <div className={styles.nextInstallmentBox}>
+                      <CalendarClock size={15} />
+                      <div>
+                        <strong>
+                          Next installment #{nextInstallment.installmentNumber}
+                        </strong>
+                        <span>
+                          {formatRwf(nextInstallment.balanceRwf)} · Due{" "}
+                          {formatDate(nextInstallment.dueAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : installments.length > 0 ? (
+                    <div className={styles.nextInstallmentBox}>
+                      <CheckCircle2 size={15} />
+                      <div>
+                        <strong>All installments cleared</strong>
+                        <span>No unpaid installment remains.</span>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.cardFooter}>
+                    {debt.balanceRwf > 0 ? (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        type="button"
+                        onClick={() => openPaymentModal(debt)}
+                        disabled={!isCashOpen}
+                      >
+                        <Plus size={13} />
+                        Record payment
+                      </button>
+                    ) : (
+                      <span className="badge badge-green">Cleared</span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+
+            {filteredDebts.length === 0 ? (
+              <EmptyCard
+                icon={<WalletCards size={20} />}
+                title="No customer debts found"
+                text="Create a pay-later or installment sale from the Sell page."
+              />
+            ) : null}
+          </div>
+
+          {hasMoreDebts ? (
+            <div className={styles.loadMoreBox}>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => setVisibleDebtsCount((current) => current + 8)}
+              >
+                Load more debts
               </button>
             </div>
+          ) : null}
+        </section>
 
-            <form onSubmit={handleRecordPayment} className="staff-modal-body">
-              {selectedInstallment ? (
-                <div
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "var(--gold-lt)",
-                    color: "var(--gray-900)",
-                  }}
-                >
-                  <div className="staff-form-section-title">
-                    Selected installment
-                  </div>
+        <section className={`table-card premium-panel ${styles.planPanel}`}>
+          <div className="table-card-header">
+            <div>
+              <div className="table-title">Installment schedules</div>
+              <div className="app-subtitle">
+                Quick view of all installment plans and their payment status.
+              </div>
+            </div>
 
-                  <div style={{ marginTop: 8, fontWeight: 900 }}>
-                    Installment #{selectedInstallment.installmentNumber}
-                  </div>
+            <span className="badge badge-blue">
+              {filteredInstallmentDebts.length} plan(s)
+            </span>
+          </div>
 
-                  <div
-                    style={{
-                      marginTop: 6,
-                      color: "var(--gray-600)",
-                      fontWeight: 800,
-                      fontSize: 13,
-                    }}
-                  >
-                    Balance: {formatRwf(selectedInstallment.balanceRwf)} · Due:{" "}
-                    {formatDate(selectedInstallment.dueAt)}
+          <div className={styles.planList}>
+            {visibleInstallmentDebts.map((debt) => (
+              <article key={debt.id} className={styles.planCard}>
+                <div className={styles.planCardTop}>
+                  <div className={styles.debtIdentity}>
+                    <div className={styles.cardIcon}>
+                      <CalendarClock size={18} />
+                    </div>
+
+                    <div>
+                      <h3>{debt.customerName}</h3>
+                      <p>{debt.saleNumber || "No sale number"}</p>
+                      <span>
+                        Balance: {formatRwf(debt.balanceRwf)} · Original:{" "}
+                        {formatRwf(debt.originalAmountRwf)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              ) : (selectedDebt.installments || []).length > 0 ? (
-                <div
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "var(--gray-50)",
-                    color: "var(--gray-900)",
-                  }}
-                >
-                  <div className="staff-form-section-title">
-                    Payment allocation
+
+                <div className={styles.installmentGrid}>
+                  {(debt.installments || []).map((installment) => {
+                    const paid = installment.balanceRwf <= 0;
+                    const overdue =
+                      !paid && isOverdue(installment.dueAt || null);
+
+                    return (
+                      <div
+                        key={installment.id}
+                        className={cx(
+                          styles.installmentCard,
+                          overdue && styles.installmentCardOverdue,
+                          paid && styles.installmentCardPaid,
+                        )}
+                      >
+                        <div className={styles.installmentTop}>
+                          <strong>
+                            Installment #{installment.installmentNumber}
+                          </strong>
+
+                          <span
+                            className={
+                              paid
+                                ? "badge badge-green"
+                                : overdue
+                                  ? "badge badge-orange"
+                                  : "badge badge-blue"
+                            }
+                          >
+                            {paid ? "Paid" : overdue ? "Overdue" : "Open"}
+                          </span>
+                        </div>
+
+                        <div className={styles.miniGrid}>
+                          <MiniInfo
+                            label="Expected"
+                            value={formatRwf(installment.expectedAmountRwf)}
+                          />
+
+                          <MiniInfo
+                            label="Balance"
+                            value={formatRwf(installment.balanceRwf)}
+                            tone={paid ? "success" : "warning"}
+                          />
+
+                          <MiniInfo
+                            label="Due"
+                            value={formatDate(installment.dueAt)}
+                          />
+                        </div>
+
+                        {installment.balanceRwf > 0 ? (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            type="button"
+                            onClick={() => openPaymentModal(debt, installment)}
+                            disabled={!isCashOpen}
+                          >
+                            Pay installment
+                          </button>
+                        ) : (
+                          <span className="badge badge-green">Paid</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+
+            {filteredInstallmentDebts.length === 0 ? (
+              <EmptyCard
+                icon={<CheckCircle2 size={20} />}
+                title="No installment plans yet"
+                text="Create an installment sale from the Sell page."
+              />
+            ) : null}
+          </div>
+
+          {hasMoreInstallmentPlans ? (
+            <div className={styles.loadMoreBox}>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() =>
+                  setVisibleInstallmentPlansCount((current) => current + 6)
+                }
+              >
+                Load more installment plans
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        {paymentModalOpen && selectedDebt ? (
+          <div className="staff-modal-backdrop">
+            <div className="staff-modal">
+              <div className="staff-modal-header">
+                <div>
+                  <div className="staff-modal-icon">
+                    <WalletCards size={22} />
                   </div>
-                  <p
-                    style={{
-                      marginTop: 8,
-                      color: "var(--gray-500)",
-                      fontWeight: 750,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    No specific installment selected. The system will apply this
-                    payment to the oldest unpaid installments first.
+
+                  <h2>Record debt payment</h2>
+                  <p>
+                    {selectedDebt.customerName} owes{" "}
+                    {formatRwf(selectedDebt.balanceRwf)}.
                   </p>
                 </div>
-              ) : null}
 
-              <div className="staff-form-grid">
-                <label className="staff-form-group">
-                  <span>Amount received</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={
-                      selectedInstallment
-                        ? selectedInstallment.balanceRwf
-                        : selectedDebt.balanceRwf
-                    }
-                    value={amountRwf}
-                    onChange={(event) => setAmountRwf(event.target.value)}
-                    required
-                  />
-                </label>
-
-                <label className="staff-form-group">
-                  <span>Payment method</span>
-                  <select
-                    value={method}
-                    onChange={(event) =>
-                      setMethod(event.target.value as SalePaymentMethod)
-                    }
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="momo">MoMo</option>
-                    <option value="bank">Bank</option>
-                    <option value="card">Card</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="staff-form-group">
-                <span>Payment note</span>
-                <input
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="Example: Customer came back and paid installment."
-                />
-              </label>
-
-              <div className="staff-modal-footer">
                 <button
                   type="button"
                   onClick={closePaymentModal}
-                  className="staff-btn staff-btn-outline"
+                  className="staff-modal-close"
                 >
-                  Cancel
+                  <X size={18} />
                 </button>
-
-                <AsyncButton
-                  loading={saving}
-                  disabled={!isCashOpen}
-                  type="submit"
-                >
-                  <Plus size={15} />
-                  Save payment
-                </AsyncButton>
               </div>
-            </form>
+
+              <form onSubmit={handleRecordPayment} className="staff-modal-body">
+                {selectedInstallment ? (
+                  <div className={styles.selectedInstallmentBox}>
+                    <div className="staff-form-section-title">
+                      Selected installment
+                    </div>
+
+                    <strong>
+                      Installment #{selectedInstallment.installmentNumber}
+                    </strong>
+
+                    <span>
+                      Balance: {formatRwf(selectedInstallment.balanceRwf)} ·
+                      Due: {formatDate(selectedInstallment.dueAt)}
+                    </span>
+                  </div>
+                ) : (selectedDebt.installments || []).length > 0 ? (
+                  <div className={styles.allocationBox}>
+                    <div className="staff-form-section-title">
+                      Payment allocation
+                    </div>
+                    <p>
+                      No specific installment selected. The system will apply
+                      this payment to the oldest unpaid installments first.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="staff-form-grid">
+                  <label className="staff-form-group">
+                    <span>Amount received</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={
+                        selectedInstallment
+                          ? selectedInstallment.balanceRwf
+                          : selectedDebt.balanceRwf
+                      }
+                      value={amountRwf}
+                      onChange={(event) => setAmountRwf(event.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="staff-form-group">
+                    <span>Payment method</span>
+                    <select
+                      value={method}
+                      onChange={(event) =>
+                        setMethod(event.target.value as SalePaymentMethod)
+                      }
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="momo">MoMo</option>
+                      <option value="bank">Bank</option>
+                      <option value="card">Card</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="staff-form-group">
+                  <span>Payment note</span>
+                  <input
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    placeholder="Example: Customer came back and paid installment."
+                  />
+                </label>
+
+                <div className="staff-modal-footer">
+                  <button
+                    type="button"
+                    onClick={closePaymentModal}
+                    className="staff-btn staff-btn-outline"
+                  >
+                    Cancel
+                  </button>
+
+                  <AsyncButton
+                    loading={saving}
+                    disabled={!isCashOpen}
+                    type="submit"
+                  >
+                    <Plus size={15} />
+                    Save payment
+                  </AsyncButton>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type MiniInfoProps = {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning";
+};
+
+function MiniInfo({ label, value, tone = "default" }: MiniInfoProps) {
+  return (
+    <div
+      className={cx(
+        styles.miniInfo,
+        tone === "success" && styles.miniInfoSuccess,
+        tone === "warning" && styles.miniInfoWarning,
+      )}
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+type EmptyCardProps = {
+  icon: ReactNode;
+  title: string;
+  text: string;
+};
+
+function EmptyCard({ icon, title, text }: EmptyCardProps) {
+  return (
+    <div className={styles.emptyCard}>
+      <div>{icon}</div>
+      <strong>{title}</strong>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+type NoticeCardProps = {
+  title: string;
+  text: string;
+  actionLabel: string;
+  onAction: () => void;
+};
+
+function NoticeCard({ title, text, actionLabel, onAction }: NoticeCardProps) {
+  return (
+    <div className={styles.noticeCard}>
+      <div className={styles.noticeContent}>
+        <AlertTriangle size={20} />
+        <div>
+          <strong>{title}</strong>
+          <p>{text}</p>
+        </div>
+      </div>
+
+      <button className="btn btn-primary" type="button" onClick={onAction}>
+        <WalletCards size={14} />
+        {actionLabel}
+      </button>
+    </div>
   );
 }

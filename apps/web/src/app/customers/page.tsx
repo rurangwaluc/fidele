@@ -24,10 +24,13 @@ import {
   getCustomers,
   updateCustomer,
 } from "@/lib/customers";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, MouseEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
+import styles from "./page.module.css";
+import { useRouter } from "next/navigation";
 
 type CustomerModalMode = "create" | "edit" | null;
 
@@ -56,10 +59,13 @@ function formatDate(value: string) {
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [visibleCustomersCount, setVisibleCustomersCount] = useState(12);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,6 +99,13 @@ export default function CustomersPage() {
     () => customers.filter((customer) => customer.phone),
     [customers],
   );
+
+  const visibleCustomers = useMemo(
+    () => customers.slice(0, visibleCustomersCount),
+    [customers, visibleCustomersCount],
+  );
+
+  const hasMoreCustomers = visibleCustomersCount < customers.length;
 
   useEffect(() => {
     loadData("");
@@ -137,6 +150,7 @@ export default function CustomersPage() {
 
       setUser(meResponse.user);
       setCustomers(customersResponse.customers);
+      setVisibleCustomersCount(12);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load customers.",
@@ -178,7 +192,7 @@ export default function CustomersPage() {
   }
 
   function toggleActionMenu(
-    event: React.MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLButtonElement>,
     customer: Customer,
   ) {
     event.stopPropagation();
@@ -324,463 +338,450 @@ export default function CustomersPage() {
 
   return (
     <AppShell title="Customers">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <Users size={15} />
-            Customer profiles
-          </span>
+      <div className={styles.customersPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <Users size={15} />
+              Customer profiles
+            </span>
 
-          <h1>Customers</h1>
+            <h1>Customers</h1>
 
-          <p>
-            Manage customers for existing-customer sales, pay-later records,
-            deposits, and follow-up when someone takes a product and promises to
-            pay later.
-          </p>
-        </div>
-
-        <div className="dashboard-hero-actions">
-          <button
-            className="btn btn-outline"
-            type="button"
-            onClick={() => loadData(search)}
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-
-          {canCreate ? (
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={openCreateModal}
-            >
-              <Plus size={14} />
-              Create customer
-            </button>
-          ) : null}
-        </div>
-      </section>
-
-      <div className="premium-stats-grid">
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Users size={20} />
-            </div>
-            <span className="badge badge-blue">Total</span>
-          </div>
-          <div className="stat-label">Customers</div>
-          <div className="stat-value">{customers.length}</div>
-          <div className="stat-help">All customer profiles in the system</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <CheckCircle2 size={20} />
-            </div>
-            <span className="badge badge-green">Active</span>
-          </div>
-          <div className="stat-label">Active customers</div>
-          <div className="stat-value">{activeCustomers.length}</div>
-          <div className="stat-help">Customers available for new sales</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <User size={20} />
-            </div>
-            <span className="badge badge-blue">Phone</span>
-          </div>
-          <div className="stat-label">With phone number</div>
-          <div className="stat-value">{customersWithPhone.length}</div>
-          <div className="stat-help">Useful for payment follow-up</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <PowerOff size={20} />
-            </div>
-            <span className="badge badge-orange">Inactive</span>
-          </div>
-          <div className="stat-label">Inactive customers</div>
-          <div className="stat-value">{inactiveCustomers.length}</div>
-          <div className="stat-help">Customers hidden from normal work</div>
-        </div>
-      </div>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      <section className="table-card premium-panel">
-        <div className="table-card-header">
-          <div>
-            <div className="table-title">Customer list</div>
-            <div className="app-subtitle">
-              Search, create, edit, activate, and deactivate customers.
-            </div>
+            <p>
+              Manage customers for existing-customer sales, pay-later records,
+              deposits, and follow-up when someone takes a product and promises
+              to pay later.
+            </p>
           </div>
 
-          {loading ? (
-            <Loader2
-              className="spin"
-              size={20}
-              style={{ color: "var(--orange)" }}
-            />
-          ) : null}
-        </div>
-
-        <div style={{ padding: 16, borderBottom: "1px solid var(--border)" }}>
-          <form
-            onSubmit={handleSearch}
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <div className="hdr-search" style={{ flex: "1 1 260px" }}>
-              <Search size={14} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search customer name or phone..."
-              />
-            </div>
-
-            <button className="btn btn-outline" type="submit">
-              <Search size={14} />
-              Search
-            </button>
-
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
             <button
               className="btn btn-outline"
               type="button"
-              onClick={() => {
-                setSearch("");
-                loadData("");
-              }}
+              onClick={() => loadData(search)}
             >
-              Clear
+              <RefreshCw size={14} />
+              Refresh
             </button>
-          </form>
-        </div>
 
-        <div className="tbl-overflow">
-          <table className="simple-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Notes</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.id}>
-                  <td>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
-                      <div
-                        className="feature-icon"
-                        style={{
-                          marginBottom: 0,
-                          width: 42,
-                          height: 42,
-                          borderRadius: 12,
-                        }}
-                      >
-                        <User size={19} />
-                      </div>
-
-                      <div>
-                        <div
-                          style={{ fontWeight: 900, color: "var(--gray-900)" }}
-                        >
-                          {customer.name}
-                        </div>
-                        <div
-                          style={{
-                            marginTop: 3,
-                            fontSize: 11,
-                            color: "var(--gray-400)",
-                            fontWeight: 800,
-                          }}
-                        >
-                          Created {formatDate(customer.createdAt)}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span className="badge badge-blue">
-                      {customer.phone || "No phone"}
-                    </span>
-                  </td>
-
-                  <td>
-                    <span style={{ color: "var(--gray-700)", fontWeight: 800 }}>
-                      {customer.address || "No address"}
-                    </span>
-                  </td>
-
-                  <td>
-                    <span
-                      style={{
-                        color: "var(--gray-500)",
-                        fontWeight: 750,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {customer.notes || "No notes"}
-                    </span>
-                  </td>
-
-                  <td>
-                    <span
-                      className={
-                        customer.isActive
-                          ? "badge badge-green"
-                          : "badge badge-orange"
-                      }
-                    >
-                      {customer.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-
-                  <td style={{ textAlign: "right" }}>
-                    {canEdit || canViewDebts ? (
-                      <button
-                        type="button"
-                        onClick={(event) => toggleActionMenu(event, customer)}
-                        className="hdr-icon"
-                        style={{
-                          marginLeft: "auto",
-                          width: 32,
-                          height: 32,
-                        }}
-                        aria-label={`Open actions for ${customer.name}`}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    ) : (
-                      <span
-                        style={{ color: "var(--gray-400)", fontWeight: 900 }}
-                      >
-                        View only
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-
-              {customers.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div
-                      style={{
-                        padding: 26,
-                        textAlign: "center",
-                        color: "var(--gray-500)",
-                        fontWeight: 800,
-                      }}
-                    >
-                      No customers found.
-                    </div>
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {actionMenu && menuCustomer ? (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            position: "fixed",
-            left: actionMenu.x,
-            top: actionMenu.y,
-            transform:
-              actionMenu.direction === "up" ? "translateY(-100%)" : "none",
-            width: 220,
-            zIndex: 1000,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            boxShadow: "var(--sh-lg)",
-            padding: 6,
-          }}
-        >
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={() => openEditModal(menuCustomer)}
-              className="staff-menu-item"
-            >
-              <Pencil size={15} />
-              Edit customer
-            </button>
-          ) : null}
-
-          {canViewDebts ? (
-            <button
-              type="button"
-              onClick={() => {
-                setActionMenu(null);
-                window.location.href = "/debts";
-              }}
-              className="staff-menu-item"
-            >
-              <WalletCards size={15} />
-              View debts page
-            </button>
-          ) : null}
-
-          {canEdit ? (
-            <>
-              <div
-                style={{
-                  height: 1,
-                  background: "var(--border)",
-                  margin: "6px 0",
-                }}
-              />
-
-              {menuCustomer.isActive ? (
-                <button
-                  type="button"
-                  onClick={() => handleDeactivate(menuCustomer)}
-                  className="staff-menu-item danger"
-                >
-                  <PowerOff size={15} />
-                  Deactivate
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleActivate(menuCustomer)}
-                  className="staff-menu-item success"
-                >
-                  <Power size={15} />
-                  Activate
-                </button>
-              )}
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {modalMode ? (
-        <div className="staff-modal-backdrop">
-          <div className="staff-modal">
-            <div className="staff-modal-header">
-              <div>
-                <div className="staff-modal-icon">
-                  <User size={22} />
-                </div>
-
-                <h2>{modalTitle}</h2>
-                <p>{modalDescription}</p>
-              </div>
-
+            {canCreate ? (
               <button
+                className="btn btn-primary"
                 type="button"
-                onClick={closeModal}
-                className="staff-modal-close"
+                onClick={openCreateModal}
               >
-                <X size={18} />
+                <Plus size={14} />
+                Create customer
               </button>
+            ) : null}
+          </div>
+        </section>
+
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            icon={<Users size={20} />}
+            label="Customers"
+            value={String(customers.length)}
+            help="All customer profiles in the system"
+            badge="Total"
+            badgeClass="badge badge-blue"
+          />
+
+          <MetricCard
+            icon={<CheckCircle2 size={20} />}
+            label="Active customers"
+            value={String(activeCustomers.length)}
+            help="Customers available for new sales"
+            badge="Active"
+            badgeClass="badge badge-green"
+          />
+
+          <MetricCard
+            icon={<User size={20} />}
+            label="With phone number"
+            value={String(customersWithPhone.length)}
+            help="Useful for payment follow-up"
+            badge="Phone"
+            badgeClass="badge badge-blue"
+          />
+
+          <MetricCard
+            icon={<PowerOff size={20} />}
+            label="Inactive customers"
+            value={String(inactiveCustomers.length)}
+            help="Customers hidden from normal work"
+            badge="Inactive"
+            badgeClass="badge badge-orange"
+          />
+        </div>
+
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
+        <section className={`table-card premium-panel ${styles.listPanel}`}>
+          <div className="table-card-header">
+            <div>
+              <div className="table-title">Customer list</div>
+              <div className="app-subtitle">
+                Search, create, edit, activate, and deactivate customers.
+              </div>
             </div>
 
-            <form
-              onSubmit={
-                modalMode === "create"
-                  ? handleCreateCustomer
-                  : handleUpdateCustomer
-              }
-              className="staff-modal-body"
-            >
-              <div className="staff-form-grid">
-                <label className="staff-form-group">
-                  <span>Customer name</span>
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Example: Jean Claude"
-                    required
-                  />
-                </label>
+            <div className={styles.listHeaderRight}>
+              <span className="badge badge-blue">
+                {customers.length} record(s)
+              </span>
 
-                <label className="staff-form-group">
-                  <span>Phone number</span>
-                  <input
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    placeholder="Example: 0783333333"
-                  />
-                </label>
+              {loading ? (
+                <Loader2
+                  className="spin"
+                  size={20}
+                  style={{ color: "var(--orange)" }}
+                />
+              ) : null}
+            </div>
+          </div>
 
-                <label className="staff-form-group">
-                  <span>Address</span>
-                  <input
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    placeholder="Example: Kigali"
-                  />
-                </label>
-
-                <label className="staff-form-group">
-                  <span>Notes</span>
-                  <input
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Example: Usually pays in the evening"
-                  />
-                </label>
+          <div className={styles.listToolbar}>
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className="hdr-search">
+                <Search size={14} />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search customer name or phone..."
+                />
               </div>
 
-              <div className="staff-modal-footer">
+              <button className="btn btn-outline" type="submit">
+                <Search size={14} />
+                Search
+              </button>
+
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  loadData("");
+                }}
+              >
+                Clear
+              </button>
+            </form>
+          </div>
+
+          <div className={styles.customerGrid}>
+            {visibleCustomers.map((customer) => (
+              <article key={customer.id} className={styles.customerCard}>
+                <div className={styles.customerCardTop}>
+                  <div className={styles.customerIdentity}>
+                    <div className={styles.customerIcon}>
+                      <User size={19} />
+                    </div>
+
+                    <div>
+                      <h3>{customer.name}</h3>
+                      <p>Created {formatDate(customer.createdAt)}</p>
+                    </div>
+                  </div>
+
+                  {canEdit || canViewDebts ? (
+                    <button
+                      type="button"
+                      onClick={(event) => toggleActionMenu(event, customer)}
+                      className={styles.cardActionButton}
+                      aria-label={`Open actions for ${customer.name}`}
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  ) : (
+                    <span className={styles.viewOnly}>View only</span>
+                  )}
+                </div>
+
+                <div className={styles.badgeRow}>
+                  <span
+                    className={
+                      customer.isActive
+                        ? "badge badge-green"
+                        : "badge badge-orange"
+                    }
+                  >
+                    {customer.isActive ? "Active" : "Inactive"}
+                  </span>
+
+                  <span className="badge badge-blue">
+                    {customer.phone ? "Has phone" : "No phone"}
+                  </span>
+                </div>
+
+                <div className={styles.customerInfoGrid}>
+                  <MiniInfo
+                    label="Phone"
+                    value={customer.phone || "No phone"}
+                    tone={customer.phone ? "success" : "warning"}
+                  />
+
+                  <MiniInfo
+                    label="Address"
+                    value={customer.address || "No address"}
+                  />
+                </div>
+
+                <div className={styles.customerNotes}>
+                  <span>Notes</span>
+                  <strong>{customer.notes || "No notes"}</strong>
+                </div>
+              </article>
+            ))}
+
+            {customers.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Users size={22} />
+                <strong>No customers found</strong>
+                <span>
+                  Create a customer profile first. Customers are needed for pay
+                  later, deposits, installments, and follow-up.
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          {hasMoreCustomers ? (
+            <div className={styles.loadMoreBox}>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() =>
+                  setVisibleCustomersCount((current) => current + 12)
+                }
+              >
+                Load more customers
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        {actionMenu && menuCustomer ? (
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              position: "fixed",
+              left: actionMenu.x,
+              top: actionMenu.y,
+              transform:
+                actionMenu.direction === "up" ? "translateY(-100%)" : "none",
+              width: 220,
+              zIndex: 1000,
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              boxShadow: "var(--sh-lg)",
+              padding: 6,
+            }}
+          >
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => openEditModal(menuCustomer)}
+                className="staff-menu-item"
+              >
+                <Pencil size={15} />
+                Edit customer
+              </button>
+            ) : null}
+
+            {canViewDebts ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActionMenu(null);
+                  router.push("/debts");
+                }}
+                className="staff-menu-item"
+              >
+                <WalletCards size={15} />
+                View debts page
+              </button>
+            ) : null}
+
+            {canEdit ? (
+              <>
+                <div
+                  style={{
+                    height: 1,
+                    background: "var(--border)",
+                    margin: "6px 0",
+                  }}
+                />
+
+                {menuCustomer.isActive ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeactivate(menuCustomer)}
+                    className="staff-menu-item danger"
+                  >
+                    <PowerOff size={15} />
+                    Deactivate
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleActivate(menuCustomer)}
+                    className="staff-menu-item success"
+                  >
+                    <Power size={15} />
+                    Activate
+                  </button>
+                )}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        {modalMode ? (
+          <div className="staff-modal-backdrop">
+            <div className="staff-modal">
+              <div className="staff-modal-header">
+                <div>
+                  <div className="staff-modal-icon">
+                    <User size={22} />
+                  </div>
+
+                  <h2>{modalTitle}</h2>
+                  <p>{modalDescription}</p>
+                </div>
+
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="staff-btn staff-btn-outline"
+                  className="staff-modal-close"
                 >
-                  Cancel
+                  <X size={18} />
                 </button>
-
-                <AsyncButton loading={saving} type="submit">
-                  <Plus size={15} />
-                  {modalMode === "create" ? "Create customer" : "Save changes"}
-                </AsyncButton>
               </div>
-            </form>
+
+              <form
+                onSubmit={
+                  modalMode === "create"
+                    ? handleCreateCustomer
+                    : handleUpdateCustomer
+                }
+                className="staff-modal-body"
+              >
+                <div className="staff-form-grid">
+                  <label className="staff-form-group">
+                    <span>Customer name</span>
+                    <input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Example: Jean Claude"
+                      required
+                    />
+                  </label>
+
+                  <label className="staff-form-group">
+                    <span>Phone number</span>
+                    <input
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      placeholder="Example: 0783333333"
+                    />
+                  </label>
+
+                  <label className="staff-form-group">
+                    <span>Address</span>
+                    <input
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                      placeholder="Example: Kigali"
+                    />
+                  </label>
+
+                  <label className="staff-form-group">
+                    <span>Notes</span>
+                    <input
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Example: Usually pays in the evening"
+                    />
+                  </label>
+                </div>
+
+                <div className="staff-modal-footer">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="staff-btn staff-btn-outline"
+                  >
+                    Cancel
+                  </button>
+
+                  <AsyncButton loading={saving} type="submit">
+                    <Plus size={15} />
+                    {modalMode === "create"
+                      ? "Create customer"
+                      : "Save changes"}
+                  </AsyncButton>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type MiniInfoProps = {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning";
+};
+
+function MiniInfo({ label, value, tone = "default" }: MiniInfoProps) {
+  return (
+    <div
+      className={[
+        styles.miniInfo,
+        tone === "success" ? styles.miniInfoSuccess : "",
+        tone === "warning" ? styles.miniInfoWarning : "",
+      ].join(" ")}
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
