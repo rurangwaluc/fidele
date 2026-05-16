@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { CashSession, getCashToday } from "@/lib/cash";
 import { Customer, getCustomers } from "@/lib/customers";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   InstallmentFrequency,
   SaleCustomerType,
@@ -27,10 +27,12 @@ import {
   getSales,
 } from "@/lib/sales";
 import { Product, getProducts } from "@/lib/products";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
 import { getToken } from "@/lib/auth";
+import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 type SaleItemForm = {
@@ -41,6 +43,10 @@ type SaleItemForm = {
 };
 
 type PaymentMode = "paid_now" | "partial" | "pay_later" | "installment";
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 function makeRow(): SaleItemForm {
   return {
@@ -511,956 +517,674 @@ export default function SalesPage() {
 
   return (
     <AppShell title="Sell">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <ShoppingCart size={15} />
-            Sales and pay later
-          </span>
+      <div className={styles.salesPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <ShoppingCart size={15} />
+              Sales and pay later
+            </span>
 
-          <h1>Create sale</h1>
+            <h1>Create sale</h1>
 
-          <p>
-            Walk-in customers must pay now. Deposit, pay later, and installments
-            require a saved customer profile.
-          </p>
-        </div>
+            <p>
+              Walk-in customers must pay now. Deposit, pay later, and
+              installments require a saved customer profile.
+            </p>
+          </div>
 
-        <div className="dashboard-hero-actions">
-          <button className="btn btn-outline" type="button" onClick={loadData}>
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-
-          {!isCashOpen ? (
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
             <button
-              className="btn btn-primary"
+              className="btn btn-outline"
               type="button"
-              onClick={() => router.push("/cash")}
+              onClick={loadData}
             >
-              <WalletCards size={14} />
-              {cashSession ? "View cash" : "Open cash"}
+              <RefreshCw size={14} />
+              Refresh
             </button>
-          ) : null}
-        </div>
-      </section>
 
-      {!isCashOpen ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 14,
-            alignItems: "center",
-            borderColor: "rgba(245, 158, 11, 0.35)",
-            background: "var(--gold-lt)",
-          }}
-        >
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <AlertTriangle size={20} style={{ color: "var(--orange)" }} />
-            <div>
-              <strong style={{ color: "var(--gray-900)" }}>
-                Selling is blocked
-              </strong>
-              <p
-                style={{
-                  marginTop: 4,
-                  color: "var(--gray-600)",
-                  fontWeight: 750,
-                }}
+            {!isCashOpen ? (
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => router.push("/cash")}
               >
-                {cashMessage}
-              </p>
-            </div>
-          </div>
-
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => router.push("/cash")}
-          >
-            <WalletCards size={14} />
-            {cashSession ? "View cash" : "Open cash"}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="premium-stats-grid">
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <ShoppingCart size={20} />
-            </div>
-            <span className="badge badge-blue">Sales</span>
-          </div>
-          <div className="stat-label">Sales records</div>
-          <div className="stat-value">{sales.length}</div>
-          <div className="stat-help">Latest sales in the system</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <CheckCircle2 size={20} />
-            </div>
-            <span className="badge badge-green">Paid</span>
-          </div>
-          <div className="stat-label">Paid sales</div>
-          <div className="stat-value">{paidSales.length}</div>
-          <div className="stat-help">Sales with no remaining balance</div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <WalletCards size={20} />
-            </div>
-            <span className="badge badge-orange">Debt</span>
-          </div>
-          <div className="stat-label">Credit sales</div>
-          <div className="stat-value">{unpaidSales.length}</div>
-          <div className="stat-help">
-            Saved customers with remaining balance
-          </div>
-        </div>
-
-        <div className="premium-stat-card">
-          <div className="stat-card-top">
-            <div className="feature-icon">
-              <Package size={20} />
-            </div>
-            <span className="badge badge-blue">Stock</span>
-          </div>
-          <div className="stat-label">Available products</div>
-          <div className="stat-value">{activeProducts.length}</div>
-          <div className="stat-help">Products ready for selling</div>
-        </div>
-      </div>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      <div className="dashboard-grid">
-        <section className="table-card premium-panel">
-          <div className="table-card-header">
-            <div>
-              <div className="table-title">New sale</div>
-              <div className="app-subtitle">
-                Product leaves stock immediately after the sale is saved.
-              </div>
-            </div>
-
-            {loading ? (
-              <Loader2
-                className="spin"
-                size={20}
-                style={{ color: "var(--orange)" }}
-              />
+                <WalletCards size={14} />
+                {cashSession ? "View cash" : "Open cash"}
+              </button>
             ) : null}
           </div>
+        </section>
 
-          <form onSubmit={handleCreateSale} className="staff-modal-body">
-            <div>
-              <div className="staff-form-section-title">Customer</div>
+        {!isCashOpen ? (
+          <NoticeCard
+            title="Selling is blocked"
+            text={cashMessage}
+            actionLabel={cashSession ? "View cash" : "Open cash"}
+            onAction={() => router.push("/cash")}
+          />
+        ) : null}
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: 10,
-                  marginTop: 10,
-                }}
-              >
-                <button
-                  type="button"
-                  className={
-                    customerType === "walk_in"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => chooseCustomerType("walk_in")}
-                >
-                  <div>
-                    <strong>Walk-in</strong>
-                    <p>Paid now only. No credit.</p>
-                  </div>
-                </button>
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            icon={<ShoppingCart size={20} />}
+            label="Sales records"
+            value={String(sales.length)}
+            help="Latest sales in the system"
+            badge="Sales"
+            badgeClass="badge badge-blue"
+          />
 
-                <button
-                  type="button"
-                  className={
-                    customerType === "existing"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => chooseCustomerType("existing")}
-                >
-                  <div>
-                    <strong>Existing</strong>
-                    <p>Can pay now, later, or installments.</p>
-                  </div>
-                </button>
+          <MetricCard
+            icon={<CheckCircle2 size={20} />}
+            label="Paid sales"
+            value={String(paidSales.length)}
+            help="Sales with no remaining balance"
+            badge="Paid"
+            badgeClass="badge badge-green"
+          />
 
-                <button
-                  type="button"
-                  className={
-                    customerType === "new"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => chooseCustomerType("new")}
-                >
-                  <div>
-                    <strong>New customer</strong>
-                    <p>Create customer for credit sale.</p>
-                  </div>
-                </button>
-              </div>
-            </div>
+          <MetricCard
+            icon={<WalletCards size={20} />}
+            label="Credit sales"
+            value={String(unpaidSales.length)}
+            help="Saved customers with remaining balance"
+            badge="Debt"
+            badgeClass="badge badge-orange"
+          />
 
-            {customerType === "walk_in" ? (
-              <>
-                <label className="staff-form-group">
-                  <span>Walk-in name</span>
-                  <input
-                    value={walkInName}
-                    onChange={(event) => setWalkInName(event.target.value)}
-                  />
-                </label>
+          <MetricCard
+            icon={<Package size={20} />}
+            label="Available products"
+            value={String(activeProducts.length)}
+            help="Products ready for selling"
+            badge="Stock"
+            badgeClass="badge badge-blue"
+          />
+        </div>
 
-                <div
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "var(--gold-lt)",
-                    color: "var(--gray-900)",
-                    fontWeight: 800,
-                  }}
-                >
-                  Walk-in customers must pay the full amount immediately. To
-                  allow deposit, pay later, or installments, choose Existing
-                  customer or New customer.
-                </div>
-              </>
-            ) : null}
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-            {customerType === "existing" ? (
+        <div className={styles.mainGrid}>
+          <section className={`table-card premium-panel ${styles.formPanel}`}>
+            <div className="table-card-header">
               <div>
-                <label className="staff-form-group">
-                  <span>Search existing customer</span>
-                  <div className="hdr-search" style={{ width: "100%" }}>
-                    <Search size={14} />
-                    <input
-                      value={customerSearch}
-                      onChange={(event) => {
-                        setCustomerSearch(event.target.value);
-                        setCustomerId("");
-                      }}
-                      placeholder="Type customer name, phone, or address..."
-                    />
-                  </div>
-                </label>
+                <div className="table-title">New sale</div>
+                <div className="app-subtitle">
+                  Product leaves stock immediately after the sale is saved.
+                </div>
+              </div>
 
-                {selectedCustomer ? (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      padding: 12,
-                      background: "var(--gold-lt)",
-                      color: "var(--gray-900)",
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 10 }}
-                    >
+              {loading ? (
+                <Loader2
+                  className="spin"
+                  size={20}
+                  style={{ color: "var(--orange)" }}
+                />
+              ) : null}
+            </div>
+
+            <form onSubmit={handleCreateSale} className={styles.formBody}>
+              <section className={styles.formSection}>
+                <div className="staff-form-section-title">Customer</div>
+
+                <div className={styles.customerTypeGrid}>
+                  <ChoiceCard
+                    title="Walk-in"
+                    text="Paid now only. No credit."
+                    selected={customerType === "walk_in"}
+                    onClick={() => chooseCustomerType("walk_in")}
+                  />
+
+                  <ChoiceCard
+                    title="Existing"
+                    text="Can pay now, later, or installments."
+                    selected={customerType === "existing"}
+                    onClick={() => chooseCustomerType("existing")}
+                  />
+
+                  <ChoiceCard
+                    title="New customer"
+                    text="Create customer for credit sale."
+                    selected={customerType === "new"}
+                    onClick={() => chooseCustomerType("new")}
+                  />
+                </div>
+              </section>
+
+              {customerType === "walk_in" ? (
+                <section className={styles.formSection}>
+                  <label className="staff-form-group">
+                    <span>Walk-in name</span>
+                    <input
+                      value={walkInName}
+                      onChange={(event) => setWalkInName(event.target.value)}
+                    />
+                  </label>
+
+                  <div className={styles.goldInfo}>
+                    Walk-in customers must pay the full amount immediately. To
+                    allow deposit, pay later, or installments, choose Existing
+                    customer or New customer.
+                  </div>
+                </section>
+              ) : null}
+
+              {customerType === "existing" ? (
+                <section className={styles.formSection}>
+                  <label className="staff-form-group">
+                    <span>Search existing customer</span>
+                    <div className="hdr-search">
+                      <Search size={14} />
+                      <input
+                        value={customerSearch}
+                        onChange={(event) => {
+                          setCustomerSearch(event.target.value);
+                          setCustomerId("");
+                        }}
+                        placeholder="Type customer name, phone, or address..."
+                      />
+                    </div>
+                  </label>
+
+                  {selectedCustomer ? (
+                    <div className={styles.selectedCustomer}>
                       <User size={17} />
                       <div>
                         <strong>{selectedCustomer.name}</strong>
-                        <div
-                          style={{
-                            marginTop: 4,
-                            fontSize: 12,
-                            fontWeight: 800,
-                            color: "var(--gray-600)",
-                          }}
-                        >
+                        <span>
                           {selectedCustomer.phone || "No phone"} ·{" "}
                           {selectedCustomer.address || "No address"}
-                        </div>
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "grid",
-                      gridTemplateColumns: "1fr",
-                      gap: 8,
-                    }}
-                  >
-                    {filteredCustomers.map((customer) => (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        onClick={() => chooseExistingCustomer(customer)}
-                        style={{
-                          width: "100%",
-                          border: "1px solid var(--border)",
-                          background: "var(--card)",
-                          color: "var(--gray-900)",
-                          borderRadius: 14,
-                          padding: 12,
-                          textAlign: "left",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            alignItems: "center",
-                          }}
+                  ) : (
+                    <div className={styles.customerResults}>
+                      {filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => chooseExistingCustomer(customer)}
+                          className={styles.customerResult}
                         >
                           <div>
                             <strong>{customer.name}</strong>
-                            <div
-                              style={{
-                                marginTop: 4,
-                                fontSize: 12,
-                                color: "var(--gray-500)",
-                                fontWeight: 800,
-                              }}
-                            >
+                            <span>
                               {customer.phone || "No phone"} ·{" "}
                               {customer.address || "No address"}
-                            </div>
+                            </span>
                           </div>
 
                           <span className="badge badge-blue">Choose</span>
-                        </div>
-                      </button>
-                    ))}
-
-                    {filteredCustomers.length === 0 ? (
-                      <div
-                        style={{
-                          border: "1px solid var(--border)",
-                          background: "var(--gray-50)",
-                          color: "var(--gray-500)",
-                          borderRadius: 14,
-                          padding: 14,
-                          fontWeight: 800,
-                        }}
-                      >
-                        No customer found. Use “New customer” to create one.
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {customerType === "new" ? (
-              <div className="staff-form-grid">
-                <label className="staff-form-group">
-                  <span>Customer name</span>
-                  <input
-                    value={newCustomerName}
-                    onChange={(event) => setNewCustomerName(event.target.value)}
-                    placeholder="Example: Jean Claude"
-                    required
-                  />
-                </label>
-
-                <label className="staff-form-group">
-                  <span>Phone</span>
-                  <input
-                    value={newCustomerPhone}
-                    onChange={(event) =>
-                      setNewCustomerPhone(event.target.value)
-                    }
-                    placeholder="Example: 0783333333"
-                  />
-                </label>
-
-                <label className="staff-form-group">
-                  <span>Address</span>
-                  <input
-                    value={newCustomerAddress}
-                    onChange={(event) =>
-                      setNewCustomerAddress(event.target.value)
-                    }
-                    placeholder="Example: Kigali"
-                  />
-                </label>
-
-                <label className="staff-form-group">
-                  <span>Customer notes</span>
-                  <input
-                    value={newCustomerNotes}
-                    onChange={(event) =>
-                      setNewCustomerNotes(event.target.value)
-                    }
-                    placeholder="Example: Promised to pay in installments"
-                  />
-                </label>
-              </div>
-            ) : null}
-
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  alignItems: "center",
-                  marginBottom: 10,
-                }}
-              >
-                <div className="staff-form-section-title">Products sold</div>
-
-                <button
-                  className="btn btn-outline btn-sm"
-                  type="button"
-                  onClick={addItemRow}
-                >
-                  <Plus size={13} />
-                  Add product
-                </button>
-              </div>
-
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                {items.map((item, index) => {
-                  const product = products.find(
-                    (productItem) => productItem.id === item.productId,
-                  );
-
-                  const lineTotal =
-                    Number(item.quantity || 0) * Number(item.unitPriceRwf || 0);
-
-                  return (
-                    <div
-                      key={item.rowId}
-                      style={{
-                        border: "1px solid var(--border)",
-                        borderRadius: 14,
-                        padding: 14,
-                        background: "var(--gray-50)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          marginBottom: 12,
-                        }}
-                      >
-                        <strong style={{ color: "var(--gray-900)" }}>
-                          Item {index + 1}
-                        </strong>
-
-                        <button
-                          type="button"
-                          className="btn btn-red-outline btn-sm"
-                          onClick={() => removeItemRow(item.rowId)}
-                          disabled={items.length === 1}
-                        >
-                          <Trash2 size={13} />
-                          Remove
                         </button>
-                      </div>
+                      ))}
 
-                      <div className="staff-form-grid">
-                        <label className="staff-form-group">
-                          <span>Product</span>
-                          <select
-                            value={item.productId}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "productId",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          >
-                            <option value="">Choose product</option>
-                            {activeProducts.map((productItem) => (
-                              <option
-                                key={productItem.id}
-                                value={productItem.id}
-                                disabled={productItem.currentStock <= 0}
-                              >
-                                {productItem.name} · Stock:{" "}
-                                {productItem.currentStock} ·{" "}
-                                {formatRwf(productItem.sellingPriceRwf)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label className="staff-form-group">
-                          <span>Quantity</span>
-                          <input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "quantity",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          />
-                        </label>
-
-                        <label className="staff-form-group">
-                          <span>Selling price</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={item.unitPriceRwf}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "unitPriceRwf",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          />
-                        </label>
-
-                        <div>
-                          <div className="staff-form-section-title">
-                            Line total
-                          </div>
-                          <div
-                            style={{
-                              marginTop: 8,
-                              fontWeight: 900,
-                              color: "var(--gray-900)",
-                              fontSize: 18,
-                            }}
-                          >
-                            {formatRwf(lineTotal)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {product ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 8,
-                            marginTop: 12,
-                          }}
-                        >
-                          <span className="badge badge-blue">
-                            Current stock: {product.currentStock}
-                          </span>
-                          <span className="badge badge-orange">
-                            Minimum price:{" "}
-                            {formatRwf(product.minSellingPriceRwf)}
-                          </span>
+                      {filteredCustomers.length === 0 ? (
+                        <div className={styles.emptyCustomer}>
+                          No customer found. Use “New customer” to create one.
                         </div>
                       ) : null}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div className="staff-form-section-title">Payment</div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                  gap: 10,
-                  marginTop: 10,
-                }}
-              >
-                <button
-                  type="button"
-                  className={
-                    paymentMode === "paid_now"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => switchPaymentMode("paid_now")}
-                >
-                  <div>
-                    <strong>Paid now</strong>
-                    <p>Full amount is paid immediately.</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={creditDisabledForWalkIn}
-                  className={
-                    paymentMode === "partial"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => switchPaymentMode("partial")}
-                  style={{
-                    opacity: creditDisabledForWalkIn ? 0.45 : 1,
-                    cursor: creditDisabledForWalkIn ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <div>
-                    <strong>Deposit</strong>
-                    <p>Saved customer pays part now.</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={creditDisabledForWalkIn}
-                  className={
-                    paymentMode === "pay_later"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => switchPaymentMode("pay_later")}
-                  style={{
-                    opacity: creditDisabledForWalkIn ? 0.45 : 1,
-                    cursor: creditDisabledForWalkIn ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <div>
-                    <strong>Pay later</strong>
-                    <p>Saved customer promises one payment.</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={creditDisabledForWalkIn}
-                  className={
-                    paymentMode === "installment"
-                      ? "staff-responsibility selected"
-                      : "staff-responsibility"
-                  }
-                  onClick={() => switchPaymentMode("installment")}
-                  style={{
-                    opacity: creditDisabledForWalkIn ? 0.45 : 1,
-                    cursor: creditDisabledForWalkIn ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <div>
-                    <strong>Installments</strong>
-                    <p>Saved customer pays balance in parts.</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="staff-form-grid">
-              {paymentMode === "partial" || paymentMode === "installment" ? (
-                <label className="staff-form-group">
-                  <span>
-                    {paymentMode === "installment"
-                      ? "Deposit paid now"
-                      : "Amount paid now"}
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={amountPaidRwf}
-                    onChange={(event) => setAmountPaidRwf(event.target.value)}
-                  />
-                </label>
+                  )}
+                </section>
               ) : null}
 
-              <label className="staff-form-group">
-                <span>Payment method</span>
-                <select
-                  value={paymentMethod}
-                  onChange={(event) =>
-                    setPaymentMethod(event.target.value as SalePaymentMethod)
-                  }
-                >
-                  <option value="cash">Cash</option>
-                  <option value="momo">MoMo</option>
-                  <option value="bank">Bank</option>
-                  <option value="card">Card</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
+              {customerType === "new" ? (
+                <section className={styles.formSection}>
+                  <div className={styles.formGrid}>
+                    <label className="staff-form-group">
+                      <span>Customer name</span>
+                      <input
+                        value={newCustomerName}
+                        onChange={(event) =>
+                          setNewCustomerName(event.target.value)
+                        }
+                        placeholder="Example: Jean Claude"
+                        required
+                      />
+                    </label>
 
-              {balanceRwf > 0 && paymentMode !== "installment" ? (
-                <label className="staff-form-group">
-                  <span>Expected payment time</span>
-                  <input
-                    type="datetime-local"
-                    value={expectedPaymentAt}
-                    onChange={(event) =>
-                      setExpectedPaymentAt(event.target.value)
-                    }
-                  />
-                </label>
+                    <label className="staff-form-group">
+                      <span>Phone</span>
+                      <input
+                        value={newCustomerPhone}
+                        onChange={(event) =>
+                          setNewCustomerPhone(event.target.value)
+                        }
+                        placeholder="Example: 0783333333"
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Address</span>
+                      <input
+                        value={newCustomerAddress}
+                        onChange={(event) =>
+                          setNewCustomerAddress(event.target.value)
+                        }
+                        placeholder="Example: Kigali"
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Customer notes</span>
+                      <input
+                        value={newCustomerNotes}
+                        onChange={(event) =>
+                          setNewCustomerNotes(event.target.value)
+                        }
+                        placeholder="Example: Promised to pay in installments"
+                      />
+                    </label>
+                  </div>
+                </section>
               ) : null}
 
-              <label className="staff-form-group">
-                <span>Payment note</span>
-                <input
-                  value={paymentNote}
-                  onChange={(event) => setPaymentNote(event.target.value)}
-                  placeholder={
-                    customerType === "walk_in"
-                      ? "Example: Walk-in paid full amount"
-                      : "Example: Customer promised to pay later"
-                  }
-                />
-              </label>
-            </div>
+              <section className={styles.formSection}>
+                <div className={styles.sectionTop}>
+                  <div className="staff-form-section-title">Products sold</div>
 
-            {paymentMode === "installment" ? (
-              <div
-                style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: 16,
-                  padding: 16,
-                  background: "var(--gray-50)",
-                }}
-              >
-                <div className="staff-form-section-title">Installment plan</div>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    type="button"
+                    onClick={addItemRow}
+                  >
+                    <Plus size={13} />
+                    Add product
+                  </button>
+                </div>
 
-                <div className="staff-form-grid" style={{ marginTop: 12 }}>
+                <div className={styles.itemStack}>
+                  {items.map((item, index) => {
+                    const product = products.find(
+                      (productItem) => productItem.id === item.productId,
+                    );
+
+                    const lineTotal =
+                      Number(item.quantity || 0) *
+                      Number(item.unitPriceRwf || 0);
+
+                    return (
+                      <div key={item.rowId} className={styles.itemCard}>
+                        <div className={styles.itemCardTop}>
+                          <strong>Item {index + 1}</strong>
+
+                          <button
+                            type="button"
+                            className="btn btn-red-outline btn-sm"
+                            onClick={() => removeItemRow(item.rowId)}
+                            disabled={items.length === 1}
+                          >
+                            <Trash2 size={13} />
+                            Remove
+                          </button>
+                        </div>
+
+                        <div className={styles.itemGrid}>
+                          <label className="staff-form-group">
+                            <span>Product</span>
+                            <select
+                              value={item.productId}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.rowId,
+                                  "productId",
+                                  event.target.value,
+                                )
+                              }
+                              required
+                            >
+                              <option value="">Choose product</option>
+                              {activeProducts.map((productItem) => (
+                                <option
+                                  key={productItem.id}
+                                  value={productItem.id}
+                                  disabled={productItem.currentStock <= 0}
+                                >
+                                  {productItem.name} · Stock:{" "}
+                                  {productItem.currentStock} ·{" "}
+                                  {formatRwf(productItem.sellingPriceRwf)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="staff-form-group">
+                            <span>Quantity</span>
+                            <input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.rowId,
+                                  "quantity",
+                                  event.target.value,
+                                )
+                              }
+                              required
+                            />
+                          </label>
+
+                          <label className="staff-form-group">
+                            <span>Selling price</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.unitPriceRwf}
+                              onChange={(event) =>
+                                updateItem(
+                                  item.rowId,
+                                  "unitPriceRwf",
+                                  event.target.value,
+                                )
+                              }
+                              required
+                            />
+                          </label>
+
+                          <div className={styles.lineTotalBox}>
+                            <span>Line total</span>
+                            <strong>{formatRwf(lineTotal)}</strong>
+                          </div>
+                        </div>
+
+                        {product ? (
+                          <div className={styles.badgeRow}>
+                            <span className="badge badge-blue">
+                              Current stock: {product.currentStock}
+                            </span>
+                            <span className="badge badge-orange">
+                              Minimum price:{" "}
+                              {formatRwf(product.minSellingPriceRwf)}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className={styles.formSection}>
+                <div className="staff-form-section-title">Payment</div>
+
+                <div className={styles.paymentGrid}>
+                  <ChoiceCard
+                    title="Paid now"
+                    text="Full amount is paid immediately."
+                    selected={paymentMode === "paid_now"}
+                    onClick={() => switchPaymentMode("paid_now")}
+                  />
+
+                  <ChoiceCard
+                    title="Deposit"
+                    text="Saved customer pays part now."
+                    selected={paymentMode === "partial"}
+                    disabled={creditDisabledForWalkIn}
+                    onClick={() => switchPaymentMode("partial")}
+                  />
+
+                  <ChoiceCard
+                    title="Pay later"
+                    text="Saved customer promises one payment."
+                    selected={paymentMode === "pay_later"}
+                    disabled={creditDisabledForWalkIn}
+                    onClick={() => switchPaymentMode("pay_later")}
+                  />
+
+                  <ChoiceCard
+                    title="Installments"
+                    text="Saved customer pays balance in parts."
+                    selected={paymentMode === "installment"}
+                    disabled={creditDisabledForWalkIn}
+                    onClick={() => switchPaymentMode("installment")}
+                  />
+                </div>
+              </section>
+
+              <section className={styles.formSection}>
+                <div className={styles.formGrid}>
+                  {paymentMode === "partial" ||
+                  paymentMode === "installment" ? (
+                    <label className="staff-form-group">
+                      <span>
+                        {paymentMode === "installment"
+                          ? "Deposit paid now"
+                          : "Amount paid now"}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={amountPaidRwf}
+                        onChange={(event) =>
+                          setAmountPaidRwf(event.target.value)
+                        }
+                      />
+                    </label>
+                  ) : null}
+
                   <label className="staff-form-group">
-                    <span>Number of installments</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={36}
-                      value={numberOfInstallments}
-                      onChange={(event) =>
-                        setNumberOfInstallments(event.target.value)
-                      }
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Frequency</span>
+                    <span>Payment method</span>
                     <select
-                      value={installmentFrequency}
+                      value={paymentMethod}
                       onChange={(event) =>
-                        setInstallmentFrequency(
-                          event.target.value as InstallmentFrequency,
+                        setPaymentMethod(
+                          event.target.value as SalePaymentMethod,
                         )
                       }
                     >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
+                      <option value="cash">Cash</option>
+                      <option value="momo">MoMo</option>
+                      <option value="bank">Bank</option>
+                      <option value="card">Card</option>
+                      <option value="other">Other</option>
                     </select>
                   </label>
 
+                  {balanceRwf > 0 && paymentMode !== "installment" ? (
+                    <label className="staff-form-group">
+                      <span>Expected payment time</span>
+                      <input
+                        type="datetime-local"
+                        value={expectedPaymentAt}
+                        onChange={(event) =>
+                          setExpectedPaymentAt(event.target.value)
+                        }
+                      />
+                    </label>
+                  ) : null}
+
                   <label className="staff-form-group">
-                    <span>First installment due</span>
+                    <span>Payment note</span>
                     <input
-                      type="datetime-local"
-                      value={firstInstallmentDueAt}
-                      onChange={(event) =>
-                        setFirstInstallmentDueAt(event.target.value)
+                      value={paymentNote}
+                      onChange={(event) => setPaymentNote(event.target.value)}
+                      placeholder={
+                        customerType === "walk_in"
+                          ? "Example: Walk-in paid full amount"
+                          : "Example: Customer promised to pay later"
                       }
                     />
                   </label>
+                </div>
+              </section>
 
-                  <div>
-                    <div className="staff-form-section-title">
-                      Balance to split
+              {paymentMode === "installment" ? (
+                <section className={styles.installmentBox}>
+                  <div className="staff-form-section-title">
+                    Installment plan
+                  </div>
+
+                  <div className={styles.installmentGrid}>
+                    <label className="staff-form-group">
+                      <span>Number of installments</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={36}
+                        value={numberOfInstallments}
+                        onChange={(event) =>
+                          setNumberOfInstallments(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>Frequency</span>
+                      <select
+                        value={installmentFrequency}
+                        onChange={(event) =>
+                          setInstallmentFrequency(
+                            event.target.value as InstallmentFrequency,
+                          )
+                        }
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </label>
+
+                    <label className="staff-form-group">
+                      <span>First installment due</span>
+                      <input
+                        type="datetime-local"
+                        value={firstInstallmentDueAt}
+                        onChange={(event) =>
+                          setFirstInstallmentDueAt(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <div className={styles.balanceBox}>
+                      <span>Balance to split</span>
+                      <strong>{formatRwf(balanceRwf)}</strong>
                     </div>
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 22,
-                        fontWeight: 900,
-                        color: "var(--gray-900)",
-                      }}
-                    >
-                      {formatRwf(balanceRwf)}
-                    </div>
                   </div>
-                </div>
 
-                <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
-                  {installmentPreview.map((installment) => (
-                    <div
-                      key={installment.number}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        border: "1px solid var(--border)",
-                        borderRadius: 12,
-                        padding: 10,
-                        background: "var(--card)",
-                        color: "var(--gray-900)",
-                        fontWeight: 800,
-                      }}
-                    >
-                      <span>Installment {installment.number}</span>
-                      <span>{formatRwf(installment.amount)}</span>
-                      <span>
-                        {formatDate(installment.dueDate.toISOString())}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <label className="staff-form-group">
-              <span>Sale notes</span>
-              <textarea
-                value={saleNotes}
-                onChange={(event) => setSaleNotes(event.target.value)}
-                placeholder={
-                  customerType === "walk_in"
-                    ? "Example: Walk-in customer paid now."
-                    : "Example: Customer took product and will pay in installments."
-                }
-              />
-            </label>
-
-            <div
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 16,
-                padding: 16,
-                background: "var(--gray-50)",
-              }}
-            >
-              <div className="staff-form-section-title">Sale summary</div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: 12,
-                  marginTop: 12,
-                }}
-              >
-                <div>
-                  <div className="stat-label">Total</div>
-                  <div className="stat-value" style={{ fontSize: 22 }}>
-                    {formatRwf(totalAmountRwf)}
+                  <div className={styles.installmentList}>
+                    {installmentPreview.map((installment) => (
+                      <div
+                        key={installment.number}
+                        className={styles.installmentRow}
+                      >
+                        <span>Installment {installment.number}</span>
+                        <strong>{formatRwf(installment.amount)}</strong>
+                        <span>
+                          {formatDate(installment.dueDate.toISOString())}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <div>
-                  <div className="stat-label">Paid now</div>
-                  <div className="stat-value" style={{ fontSize: 22 }}>
-                    {formatRwf(finalAmountPaidRwf)}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="stat-label">Balance</div>
-                  <div className="stat-value" style={{ fontSize: 22 }}>
-                    {formatRwf(balanceRwf)}
-                  </div>
-                </div>
-              </div>
-
-              {paymentMode === "installment" && balanceRwf > 0 ? (
-                <div style={{ marginTop: 12 }} className="badge badge-orange">
-                  <CalendarClock size={13} />
-                  Installment plan will be created after saving
-                </div>
+                </section>
               ) : null}
 
-              {customerType === "walk_in" && balanceRwf === 0 ? (
-                <div style={{ marginTop: 12 }} className="badge badge-green">
-                  <CheckCircle2 size={13} />
-                  Walk-in sale is fully paid
+              <section className={styles.formSection}>
+                <label className="staff-form-group">
+                  <span>Sale notes</span>
+                  <textarea
+                    value={saleNotes}
+                    onChange={(event) => setSaleNotes(event.target.value)}
+                    placeholder={
+                      customerType === "walk_in"
+                        ? "Example: Walk-in customer paid now."
+                        : "Example: Customer took product and will pay in installments."
+                    }
+                  />
+                </label>
+              </section>
+
+              <section className={styles.summaryBox}>
+                <div className="staff-form-section-title">Sale summary</div>
+
+                <div className={styles.summaryGrid}>
+                  <SummaryItem
+                    label="Total"
+                    value={formatRwf(totalAmountRwf)}
+                  />
+                  <SummaryItem
+                    label="Paid now"
+                    value={formatRwf(finalAmountPaidRwf)}
+                  />
+                  <SummaryItem label="Balance" value={formatRwf(balanceRwf)} />
                 </div>
-              ) : null}
-            </div>
 
-            <div className="staff-modal-footer">
-              <button
-                type="button"
-                className="staff-btn staff-btn-outline"
-                onClick={resetSaleForm}
-              >
-                Reset
-              </button>
-
-              <AsyncButton
-                loading={saving}
-                disabled={!isCashOpen}
-                type="submit"
-              >
-                <Plus size={15} />
-                Save sale
-              </AsyncButton>
-            </div>
-          </form>
-        </section>
-
-        <section className="table-card premium-panel">
-          <div className="table-card-header">
-            <div>
-              <div className="table-title">Recent sales</div>
-              <div className="app-subtitle">
-                Click view to open a full sale record.
-              </div>
-            </div>
-          </div>
-
-          <div className="attention-list">
-            {sales.slice(0, 10).map((sale) => (
-              <div key={sale.id} className="attention-item">
-                <ShoppingCart size={17} />
-                <div style={{ width: "100%" }}>
-                  <strong>{sale.saleNumber}</strong>
-                  <span>
-                    {sale.customerName || sale.walkInName || "Walk-in customer"}{" "}
-                    · {formatRwf(sale.totalAmountRwf)}
-                  </span>
-                  <span>
-                    Paid: {formatRwf(sale.amountPaidRwf)} · Balance:{" "}
-                    {formatRwf(sale.balanceRwf)} · Sold by{" "}
-                    {sale.soldByName || "Unknown"}
-                  </span>
-                  {sale.balanceRwf > 0 ? (
-                    <span>
-                      Expected payment: {formatDate(sale.expectedPaymentAt)}
-                    </span>
+                <div className={styles.summaryBadges}>
+                  {paymentMode === "installment" && balanceRwf > 0 ? (
+                    <div className="badge badge-orange">
+                      <CalendarClock size={13} />
+                      Installment plan will be created after saving
+                    </div>
                   ) : null}
 
-                  <div style={{ marginTop: 10 }}>
+                  {customerType === "walk_in" && balanceRwf === 0 ? (
+                    <div className="badge badge-green">
+                      <CheckCircle2 size={13} />
+                      Walk-in sale is fully paid
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
+              <div className={styles.formFooter}>
+                <button
+                  type="button"
+                  className="staff-btn staff-btn-outline"
+                  onClick={resetSaleForm}
+                >
+                  Reset
+                </button>
+
+                <AsyncButton
+                  loading={saving}
+                  disabled={!isCashOpen}
+                  type="submit"
+                >
+                  <Plus size={15} />
+                  Save sale
+                </AsyncButton>
+              </div>
+            </form>
+          </section>
+
+          <section className={`table-card premium-panel ${styles.recentPanel}`}>
+            <div className="table-card-header">
+              <div>
+                <div className="table-title">Recent sales</div>
+                <div className="app-subtitle">
+                  Click view to open a full sale record.
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.recentList}>
+              {sales.slice(0, 10).map((sale) => (
+                <div key={sale.id} className={styles.saleCard}>
+                  <div className={styles.saleCardIcon}>
+                    <ShoppingCart size={17} />
+                  </div>
+
+                  <div className={styles.saleCardBody}>
+                    <strong>{sale.saleNumber}</strong>
+                    <span>
+                      {sale.customerName ||
+                        sale.walkInName ||
+                        "Walk-in customer"}{" "}
+                      · {formatRwf(sale.totalAmountRwf)}
+                    </span>
+                    <span>
+                      Paid: {formatRwf(sale.amountPaidRwf)} · Balance:{" "}
+                      {formatRwf(sale.balanceRwf)} · Sold by{" "}
+                      {sale.soldByName || "Unknown"}
+                    </span>
+
+                    {sale.balanceRwf > 0 ? (
+                      <span>
+                        Expected payment: {formatDate(sale.expectedPaymentAt)}
+                      </span>
+                    ) : null}
+
                     <button
                       className="btn btn-outline btn-sm"
                       type="button"
@@ -1471,21 +1195,127 @@ export default function SalesPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {sales.length === 0 ? (
-              <div className="attention-item">
-                <Search size={17} />
-                <div>
-                  <strong>No sales yet</strong>
-                  <span>Create your first sale from the form.</span>
+              {sales.length === 0 ? (
+                <div className={styles.saleCard}>
+                  <div className={styles.saleCardIcon}>
+                    <Search size={17} />
+                  </div>
+
+                  <div className={styles.saleCardBody}>
+                    <strong>No sales yet</strong>
+                    <span>Create your first sale from the form.</span>
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
+              ) : null}
+            </div>
+          </section>
+        </div>
       </div>
     </AppShell>
+  );
+}
+
+type MetricCardProps = {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  help: string;
+  badge: string;
+  badgeClass: string;
+};
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  help,
+  badge,
+  badgeClass,
+}: MetricCardProps) {
+  return (
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
+        <div className="feature-icon">{icon}</div>
+        <span className={badgeClass}>{badge}</span>
+      </div>
+
+      <div className="stat-label">{label}</div>
+      <div className={styles.metricValue}>{value}</div>
+      <div className="stat-help">{help}</div>
+    </div>
+  );
+}
+
+type NoticeCardProps = {
+  title: string;
+  text: string;
+  actionLabel: string;
+  onAction: () => void;
+};
+
+function NoticeCard({ title, text, actionLabel, onAction }: NoticeCardProps) {
+  return (
+    <div className={styles.noticeCard}>
+      <div className={styles.noticeContent}>
+        <AlertTriangle size={20} />
+        <div>
+          <strong>{title}</strong>
+          <p>{text}</p>
+        </div>
+      </div>
+
+      <button className="btn btn-primary" type="button" onClick={onAction}>
+        <WalletCards size={14} />
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
+type ChoiceCardProps = {
+  title: string;
+  text: string;
+  selected: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+};
+
+function ChoiceCard({
+  title,
+  text,
+  selected,
+  disabled = false,
+  onClick,
+}: ChoiceCardProps) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      className={cx(
+        styles.choiceCard,
+        selected && styles.choiceCardSelected,
+        disabled && styles.choiceCardDisabled,
+      )}
+      onClick={onClick}
+    >
+      <strong>{title}</strong>
+      <span>{text}</span>
+    </button>
+  );
+}
+
+type SummaryItemProps = {
+  label: string;
+  value: string;
+};
+
+function SummaryItem({ label, value }: SummaryItemProps) {
+  return (
+    <div className={styles.summaryItem}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
