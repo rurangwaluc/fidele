@@ -23,10 +23,12 @@ import {
   downloadDailySummaryPdf,
   getDailySummaryReport,
 } from "@/lib/reports";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
+import styles from "./page.module.css";
 
 function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
@@ -211,148 +213,96 @@ export default function ReportsPage() {
 
   return (
     <AppShell title="Reports">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <FileText size={15} />
-            Shop proof reports
-          </span>
+      <div className={styles.reportsPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <FileText size={15} />
+              Shop proof reports
+            </span>
 
-          <h1>Reports</h1>
+            <h1>Reports</h1>
 
-          <p>
-            View daily shop performance and download professional PDF proof
-            files for sales, cash, debts, expenses, and stock.
-          </p>
-        </div>
-
-        <div className="dashboard-hero-actions">
-          <form
-            onSubmit={handleFilter}
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <input
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              style={{
-                height: 40,
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                background: "var(--card)",
-                color: "var(--gray-900)",
-                padding: "0 12px",
-                fontWeight: 800,
-              }}
-            />
-
-            <button className="btn btn-outline" type="submit">
-              <RefreshCw size={14} />
-              Load report
-            </button>
-          </form>
-
-          <AsyncButton
-            loading={downloading}
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={!report || !canViewReports || !hasDownloadableData}
-          >
-            <Download size={14} />
-            Download PDF
-          </AsyncButton>
-        </div>
-      </section>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      {!canViewReports && user ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            borderColor: "rgba(245, 158, 11, 0.35)",
-            background: "var(--gold-lt)",
-            color: "var(--gray-900)",
-            fontWeight: 800,
-          }}
-        >
-          You do not have permission to view or download reports.
-        </div>
-      ) : null}
-
-      {!loading && report && !hasDownloadableData ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            borderColor: "rgba(245, 158, 11, 0.35)",
-            background: "var(--gold-lt)",
-            color: "var(--gray-900)",
-            fontWeight: 800,
-          }}
-        >
-          No report PDF is available for this date because there is no shop data
-          to download.
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="loading-card">
-          <Loader2 className="spin" size={18} />
-          <div>
-            <strong>Loading report...</strong>
-            <p>Preparing shop summary for {date}.</p>
+            <p>
+              View daily shop performance and download professional PDF proof
+              files for sales, cash, debts, expenses, and stock.
+            </p>
           </div>
-        </div>
-      ) : null}
 
-      {!loading && report ? (
-        <>
-          <section
-            className="table-card premium-panel"
-            style={{
-              marginBottom: 18,
-              padding: 18,
-              borderColor:
-                shopHealth.label === "Clean"
-                  ? "rgba(34, 197, 94, 0.28)"
-                  : "rgba(245, 158, 11, 0.35)",
-              background:
-                shopHealth.label === "Clean"
-                  ? "var(--green-lt)"
-                  : "var(--gold-lt)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.4fr repeat(3, minmax(0, 1fr))",
-                gap: 14,
-                alignItems: "center",
-              }}
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
+            <form onSubmit={handleFilter} className={styles.dateForm}>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+
+              <button className="btn btn-outline" type="submit">
+                <RefreshCw size={14} />
+                Load report
+              </button>
+            </form>
+
+            <AsyncButton
+              loading={downloading}
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={!report || !canViewReports || !hasDownloadableData}
             >
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <div className="feature-icon" style={{ marginBottom: 0 }}>
+              <Download size={14} />
+              Download PDF
+            </AsyncButton>
+          </div>
+        </section>
+
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
+        {!canViewReports && user ? (
+          <div className={styles.warningNotice}>
+            <ShieldCheck size={20} />
+            <div>
+              <strong>No report access</strong>
+              <span>
+                You do not have permission to view or download reports.
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && report && !hasDownloadableData ? (
+          <div className={styles.warningNotice}>
+            <AlertTriangle size={20} />
+            <div>
+              <strong>No PDF available for this date</strong>
+              <span>
+                There is no shop data to download yet. Sales, cash, debts,
+                expenses, or stock activity will make a report available.
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="loading-card">
+            <Loader2 className="spin" size={18} />
+            <div>
+              <strong>Loading report...</strong>
+              <p>Preparing shop summary for {date}.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && report && canViewReports ? (
+          <>
+            <section
+              className={
+                shopHealth.label === "Clean"
+                  ? styles.summaryCardClean
+                  : styles.summaryCardWarning
+              }
+            >
+              <div className={styles.summaryIntro}>
+                <div className="feature-icon">
                   {shopHealth.label === "Clean" ? (
                     <CheckCircle2 size={21} />
                   ) : (
@@ -361,430 +311,378 @@ export default function ReportsPage() {
                 </div>
 
                 <div>
-                  <div
-                    style={{
-                      color: "var(--gray-900)",
-                      fontSize: 18,
-                      fontWeight: 950,
-                      letterSpacing: "-0.3px",
-                    }}
-                  >
-                    {report.reportTitle}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 5,
-                      color: "var(--gray-600)",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {shopHealth.text}
-                  </div>
+                  <strong>{report.reportTitle}</strong>
+                  <span>{shopHealth.text}</span>
                 </div>
               </div>
 
-              <StatusMini label="Business date" value={report.businessDate} />
-              <StatusMini
-                label="Cash session"
-                value={report.cashSession?.status || "Not opened"}
+              <div className={styles.statusGrid}>
+                <StatusMini label="Business date" value={report.businessDate} />
+                <StatusMini
+                  label="Cash session"
+                  value={report.cashSession?.status || "Not opened"}
+                />
+                <StatusMini
+                  label="Sales count"
+                  value={String(report.summary.salesCount)}
+                />
+                <StatusMini
+                  label="Report status"
+                  value={shopHealth.label}
+                  danger={shopHealth.label !== "Clean"}
+                />
+              </div>
+            </section>
+
+            <div className={styles.metricsGrid}>
+              <ReportMetric
+                icon={<ShoppingCart size={20} />}
+                label="Total sales"
+                value={formatRwf(report.summary.totalSalesRwf)}
+                help={`${report.summary.salesCount} sale(s) recorded`}
+                badge="Sales"
+                badgeClass="badge badge-green"
               />
-              <StatusMini
-                label="Report status"
-                value={shopHealth.label}
-                danger={shopHealth.label !== "Clean"}
+
+              <ReportMetric
+                icon={<Banknote size={20} />}
+                label="Money received"
+                value={formatRwf(report.summary.moneyInRwf)}
+                help={`Paid on sales: ${formatRwf(
+                  report.summary.amountPaidOnSalesRwf,
+                )}`}
+                badge="Money in"
+                badgeClass="badge badge-green"
+              />
+
+              <ReportMetric
+                icon={<ReceiptText size={20} />}
+                label="Money spent"
+                value={formatRwf(report.summary.moneyOutRwf)}
+                help={`${report.summary.approvedExpensesCount} approved expense(s)`}
+                badge="Money out"
+                badgeClass="badge badge-orange"
+              />
+
+              <ReportMetric
+                icon={<WalletCards size={20} />}
+                label="Net movement"
+                value={formatRwf(report.summary.netMoneyMovementRwf)}
+                help="Money received minus money spent"
+                badge="Net"
+                badgeClass={
+                  report.summary.netMoneyMovementRwf >= 0
+                    ? "badge badge-green"
+                    : "badge badge-orange"
+                }
+              />
+
+              <ReportMetric
+                icon={<Users size={20} />}
+                label="Open customer debt"
+                value={formatRwf(report.summary.openCustomerDebtRwf)}
+                help={`${report.summary.overdueDebtCount} overdue debt(s)`}
+                badge="Debts"
+                badgeClass="badge badge-orange"
+              />
+
+              <ReportMetric
+                icon={<ReceiptText size={20} />}
+                label="Pending expenses"
+                value={formatRwf(report.summary.pendingExpensesRwf)}
+                help={`${report.summary.pendingExpensesCount} waiting owner review`}
+                badge="Approval"
+                badgeClass={
+                  report.summary.pendingExpensesCount > 0
+                    ? "badge badge-orange"
+                    : "badge badge-green"
+                }
+              />
+
+              <ReportMetric
+                icon={<Boxes size={20} />}
+                label="Stock value"
+                value={formatRwf(report.summary.stockValueRwf)}
+                help={`${report.summary.lowStockCount} low-stock product(s)`}
+                badge="Stock"
+                badgeClass="badge badge-blue"
+              />
+
+              <ReportMetric
+                icon={<Boxes size={20} />}
+                label="Zero stock"
+                value={String(report.summary.zeroStockCount)}
+                help="Products with no available stock"
+                badge="Empty"
+                badgeClass={
+                  report.summary.zeroStockCount > 0
+                    ? "badge badge-orange"
+                    : "badge badge-green"
+                }
               />
             </div>
-          </section>
 
-          <div className="premium-stats-grid">
-            <ReportMetric
-              icon={<ShoppingCart size={20} />}
-              label="Total sales"
-              value={formatRwf(report.summary.totalSalesRwf)}
-              help={`${report.summary.salesCount} sale(s) recorded`}
-              badge="Sales"
-              badgeClass="badge badge-green"
-            />
-
-            <ReportMetric
-              icon={<Banknote size={20} />}
-              label="Money received"
-              value={formatRwf(report.summary.moneyInRwf)}
-              help={`Paid on sales: ${formatRwf(
-                report.summary.amountPaidOnSalesRwf,
-              )}`}
-              badge="Money in"
-              badgeClass="badge badge-green"
-            />
-
-            <ReportMetric
-              icon={<ReceiptText size={20} />}
-              label="Money spent"
-              value={formatRwf(report.summary.moneyOutRwf)}
-              help={`${report.summary.approvedExpensesCount} approved expense(s)`}
-              badge="Money out"
-              badgeClass="badge badge-orange"
-            />
-
-            <ReportMetric
-              icon={<WalletCards size={20} />}
-              label="Net movement"
-              value={formatRwf(report.summary.netMoneyMovementRwf)}
-              help="Money received minus money spent"
-              badge="Net"
-              badgeClass={
-                report.summary.netMoneyMovementRwf >= 0
-                  ? "badge badge-green"
-                  : "badge badge-orange"
-              }
-            />
-          </div>
-
-          <div className="premium-stats-grid" style={{ marginTop: 18 }}>
-            <ReportMetric
-              icon={<Users size={20} />}
-              label="Open customer debt"
-              value={formatRwf(report.summary.openCustomerDebtRwf)}
-              help={`${report.summary.overdueDebtCount} overdue debt(s)`}
-              badge="Debts"
-              badgeClass="badge badge-orange"
-            />
-
-            <ReportMetric
-              icon={<ReceiptText size={20} />}
-              label="Pending expenses"
-              value={formatRwf(report.summary.pendingExpensesRwf)}
-              help={`${report.summary.pendingExpensesCount} waiting owner review`}
-              badge="Approval"
-              badgeClass={
-                report.summary.pendingExpensesCount > 0
-                  ? "badge badge-orange"
-                  : "badge badge-green"
-              }
-            />
-
-            <ReportMetric
-              icon={<Boxes size={20} />}
-              label="Stock value"
-              value={formatRwf(report.summary.stockValueRwf)}
-              help={`${report.summary.lowStockCount} low-stock product(s)`}
-              badge="Stock"
-              badgeClass="badge badge-blue"
-            />
-
-            <ReportMetric
-              icon={<Boxes size={20} />}
-              label="Zero stock"
-              value={String(report.summary.zeroStockCount)}
-              help="Products with no available stock"
-              badge="Empty"
-              badgeClass={
-                report.summary.zeroStockCount > 0
-                  ? "badge badge-orange"
-                  : "badge badge-green"
-              }
-            />
-          </div>
-
-          <div className="dashboard-grid">
-            <section className="table-card premium-panel">
-              <div className="table-card-header">
-                <div>
-                  <div className="table-title">Cash session proof</div>
-                  <div className="app-subtitle">
-                    Drawer control for this business date.
-                  </div>
-                </div>
-
-                <span
-                  className={
+            <div className={styles.reportGrid}>
+              <section className={styles.panel}>
+                <PanelHeader
+                  title="Cash session proof"
+                  subtitle="Drawer control for this business date."
+                  badge={report.cashSession?.status || "Not opened"}
+                  badgeClass={
                     report.cashSession?.status === "open"
                       ? "badge badge-green"
                       : report.cashSession?.status === "closed"
                         ? "badge badge-blue"
                         : "badge badge-orange"
                   }
-                >
-                  {report.cashSession?.status || "Not opened"}
-                </span>
-              </div>
+                />
 
-              <div className="attention-list">
-                <ProofRow
-                  icon={<CalendarDays size={17} />}
-                  title="Business date"
-                  text={report.businessDate}
-                />
-                <ProofRow
-                  icon={<Banknote size={17} />}
-                  title="Opening float"
-                  text={formatRwf(report.cashSession?.openingFloatRwf || 0)}
-                />
-                <ProofRow
-                  icon={<WalletCards size={17} />}
-                  title="Expected cash"
-                  text={formatRwf(report.cashSession?.expectedCashRwf || 0)}
-                />
-                <ProofRow
-                  icon={<Clock3 size={17} />}
-                  title="Closed at"
-                  text={formatDate(report.cashSession?.closedAt || null)}
-                />
-              </div>
-            </section>
-
-            <section className="table-card premium-panel">
-              <div className="table-card-header">
-                <div>
-                  <div className="table-title">Payment method breakdown</div>
-                  <div className="app-subtitle">
-                    How money entered and left the shop.
-                  </div>
+                <div className={styles.proofList}>
+                  <ProofRow
+                    icon={<CalendarDays size={17} />}
+                    title="Business date"
+                    text={report.businessDate}
+                  />
+                  <ProofRow
+                    icon={<Banknote size={17} />}
+                    title="Opening float"
+                    text={formatRwf(report.cashSession?.openingFloatRwf || 0)}
+                  />
+                  <ProofRow
+                    icon={<WalletCards size={17} />}
+                    title="Expected cash"
+                    text={formatRwf(report.cashSession?.expectedCashRwf || 0)}
+                  />
+                  <ProofRow
+                    icon={<Clock3 size={17} />}
+                    title="Closed at"
+                    text={formatDate(report.cashSession?.closedAt || null)}
+                  />
                 </div>
-              </div>
+              </section>
 
-              <div className="attention-list">
-                <MethodRow
-                  label="Cash"
-                  moneyIn={report.methodTotals.moneyIn.cash}
-                  moneyOut={report.methodTotals.moneyOut.cash}
+              <section className={styles.panel}>
+                <PanelHeader
+                  title="Payment method breakdown"
+                  subtitle="How money entered and left the shop."
                 />
-                <MethodRow
-                  label="MoMo"
-                  moneyIn={report.methodTotals.moneyIn.momo}
-                  moneyOut={report.methodTotals.moneyOut.momo}
-                />
-                <MethodRow
-                  label="Bank"
-                  moneyIn={report.methodTotals.moneyIn.bank}
-                  moneyOut={report.methodTotals.moneyOut.bank}
-                />
-                <MethodRow
-                  label="Card / Other"
-                  moneyIn={
-                    report.methodTotals.moneyIn.card +
-                    report.methodTotals.moneyIn.other
-                  }
-                  moneyOut={
-                    report.methodTotals.moneyOut.card +
-                    report.methodTotals.moneyOut.other
-                  }
-                />
-              </div>
-            </section>
-          </div>
 
-          <div className="dashboard-grid" style={{ marginTop: 18 }}>
-            <ReportListPanel
-              title="Sales in this report"
-              subtitle="Latest sales included in this daily summary."
-              emptyTitle="No sales recorded"
-              emptyText="Sales will appear here when the shop sells products."
-            >
-              {report.salesRows.slice(0, 5).map((sale) => (
-                <div key={sale.saleNumber} className="attention-item">
-                  <ShoppingCart size={17} />
-                  <div>
-                    <strong>{sale.saleNumber}</strong>
-                    <span>
-                      {sale.customerName} · {formatRwf(sale.totalAmountRwf)}
-                    </span>
-                    <span>
-                      Paid: {formatRwf(sale.amountPaidRwf)} · Balance:{" "}
-                      {formatRwf(sale.balanceRwf)}
-                    </span>
-                  </div>
+                <div className={styles.proofList}>
+                  <MethodRow
+                    label="Cash"
+                    moneyIn={report.methodTotals.moneyIn.cash}
+                    moneyOut={report.methodTotals.moneyOut.cash}
+                  />
+                  <MethodRow
+                    label="MoMo"
+                    moneyIn={report.methodTotals.moneyIn.momo}
+                    moneyOut={report.methodTotals.moneyOut.momo}
+                  />
+                  <MethodRow
+                    label="Bank"
+                    moneyIn={report.methodTotals.moneyIn.bank}
+                    moneyOut={report.methodTotals.moneyOut.bank}
+                  />
+                  <MethodRow
+                    label="Card / Other"
+                    moneyIn={
+                      report.methodTotals.moneyIn.card +
+                      report.methodTotals.moneyIn.other
+                    }
+                    moneyOut={
+                      report.methodTotals.moneyOut.card +
+                      report.methodTotals.moneyOut.other
+                    }
+                  />
                 </div>
-              ))}
-            </ReportListPanel>
-
-            <ReportListPanel
-              title="Expenses in this report"
-              subtitle="Approved money-out records for this date."
-              emptyTitle="No approved expenses"
-              emptyText="Expenses will appear here after approval."
-            >
-              {report.expenseRows.slice(0, 5).map((expense) => (
-                <div key={expense.expenseNumber} className="attention-item">
-                  <ReceiptText size={17} />
-                  <div>
-                    <strong>{expense.expenseNumber}</strong>
-                    <span>
-                      {expense.title} · {formatRwf(expense.amountRwf)}
-                    </span>
-                    <span>
-                      {expense.category} · {expense.method} · {expense.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </ReportListPanel>
-          </div>
-
-          <div className="dashboard-grid" style={{ marginTop: 18 }}>
-            <ReportListPanel
-              title="Open customer debts"
-              subtitle="Customers who still owe money."
-              emptyTitle="No open customer debt"
-              emptyText="Open debts will appear here."
-            >
-              {report.debtRows.slice(0, 5).map((debt) => (
-                <div
-                  key={`${debt.customerName}-${debt.saleNumber}`}
-                  className="attention-item"
-                >
-                  <WalletCards size={17} />
-                  <div>
-                    <strong>{debt.customerName}</strong>
-                    <span>
-                      Balance: {formatRwf(debt.balanceRwf)} · Sale:{" "}
-                      {debt.saleNumber}
-                    </span>
-                    <span>Expected: {formatDate(debt.expectedPaymentAt)}</span>
-                  </div>
-                </div>
-              ))}
-            </ReportListPanel>
-
-            <ReportListPanel
-              title="Low-stock products"
-              subtitle="Products that need attention."
-              emptyTitle="No low-stock product"
-              emptyText="Low-stock products will appear here."
-            >
-              {report.lowStockRows.slice(0, 5).map((product) => (
-                <div key={product.sku} className="attention-item">
-                  <Boxes size={17} />
-                  <div>
-                    <strong>{product.name}</strong>
-                    <span>
-                      SKU: {product.sku} · Stock: {product.currentStock}
-                    </span>
-                    <span>
-                      Alert at {product.lowStockAlert} · Price{" "}
-                      {formatRwf(product.sellingPriceRwf)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </ReportListPanel>
-          </div>
-
-          <section
-            className="table-card premium-panel"
-            style={{ marginTop: 18 }}
-          >
-            <div className="table-card-header">
-              <div>
-                <div className="table-title">Money ledger proof</div>
-                <div className="app-subtitle">
-                  Latest money proof records included in this report.
-                </div>
-              </div>
-
-              <span className="badge badge-blue">
-                {report.moneyRows.length} record(s)
-              </span>
+              </section>
             </div>
 
-            <div className="tbl-overflow">
-              <table className="simple-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Direction</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Category</th>
-                    <th>Actor</th>
-                  </tr>
-                </thead>
+            <div className={styles.reportGrid}>
+              <ReportListPanel
+                title="Sales in this report"
+                subtitle="Latest sales included in this daily summary."
+                emptyTitle="No sales recorded"
+                emptyText="Sales will appear here when the shop sells products."
+              >
+                {report.salesRows.slice(0, 5).map((sale) => (
+                  <ReportItem
+                    key={sale.saleNumber}
+                    icon={<ShoppingCart size={17} />}
+                    title={sale.saleNumber}
+                    lines={[
+                      `${sale.customerName} · ${formatRwf(sale.totalAmountRwf)}`,
+                      `Paid: ${formatRwf(sale.amountPaidRwf)} · Balance: ${formatRwf(
+                        sale.balanceRwf,
+                      )}`,
+                    ]}
+                  />
+                ))}
+              </ReportListPanel>
 
-                <tbody>
-                  {report.moneyRows.slice(0, 8).map((entry, index) => (
-                    <tr key={`${entry.time}-${entry.category}-${index}`}>
-                      <td>{formatDate(entry.time)}</td>
-                      <td>
-                        <span
-                          className={
-                            entry.direction === "money_in"
-                              ? "badge badge-green"
-                              : entry.direction === "money_out"
-                                ? "badge badge-orange"
-                                : "badge badge-blue"
-                          }
-                        >
-                          {entry.direction}
-                        </span>
-                      </td>
-                      <td>{formatRwf(entry.amountRwf)}</td>
-                      <td>{entry.method}</td>
-                      <td>{entry.category}</td>
-                      <td>{entry.actorName}</td>
-                    </tr>
-                  ))}
-
-                  {report.moneyRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={6}>
-                        <div
-                          style={{
-                            padding: 24,
-                            textAlign: "center",
-                            color: "var(--gray-500)",
-                            fontWeight: 800,
-                          }}
-                        >
-                          No money ledger proof found for this date.
-                        </div>
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
+              <ReportListPanel
+                title="Expenses in this report"
+                subtitle="Approved money-out records for this date."
+                emptyTitle="No approved expenses"
+                emptyText="Expenses will appear here after approval."
+              >
+                {report.expenseRows.slice(0, 5).map((expense) => (
+                  <ReportItem
+                    key={expense.expenseNumber}
+                    icon={<ReceiptText size={17} />}
+                    title={expense.expenseNumber}
+                    lines={[
+                      `${expense.title} · ${formatRwf(expense.amountRwf)}`,
+                      `${expense.category} · ${expense.method} · ${expense.status}`,
+                    ]}
+                  />
+                ))}
+              </ReportListPanel>
             </div>
-          </section>
 
-          {hasDownloadableData ? (
-            <section
-              className="table-card premium-panel"
-              style={{
-                marginTop: 18,
-                padding: 18,
-                borderColor: "rgba(34, 197, 94, 0.22)",
-              }}
-            >
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <ShieldCheck size={20} style={{ color: "var(--green)" }} />
-                <div>
-                  <strong style={{ color: "var(--gray-900)" }}>
-                    Downloadable PDF proof is ready
-                  </strong>
-                  <p
-                    style={{
-                      marginTop: 4,
-                      color: "var(--gray-600)",
-                      fontWeight: 750,
-                    }}
+            <div className={styles.reportGrid}>
+              <ReportListPanel
+                title="Open customer debts"
+                subtitle="Customers who still owe money."
+                emptyTitle="No open customer debt"
+                emptyText="Open debts will appear here."
+              >
+                {report.debtRows.slice(0, 5).map((debt) => (
+                  <ReportItem
+                    key={`${debt.customerName}-${debt.saleNumber}`}
+                    icon={<WalletCards size={17} />}
+                    title={debt.customerName}
+                    lines={[
+                      `Balance: ${formatRwf(debt.balanceRwf)} · Sale: ${
+                        debt.saleNumber
+                      }`,
+                      `Expected: ${formatDate(debt.expectedPaymentAt)}`,
+                    ]}
+                  />
+                ))}
+              </ReportListPanel>
+
+              <ReportListPanel
+                title="Low-stock products"
+                subtitle="Products that need attention."
+                emptyTitle="No low-stock product"
+                emptyText="Low-stock products will appear here."
+              >
+                {report.lowStockRows.slice(0, 5).map((product) => (
+                  <ReportItem
+                    key={product.sku}
+                    icon={<Boxes size={17} />}
+                    title={product.name}
+                    lines={[
+                      `SKU: ${product.sku} · Stock: ${product.currentStock}`,
+                      `Alert at ${product.lowStockAlert} · Price ${formatRwf(
+                        product.sellingPriceRwf,
+                      )}`,
+                    ]}
+                  />
+                ))}
+              </ReportListPanel>
+            </div>
+
+            <section className={styles.panel}>
+              <PanelHeader
+                title="Money ledger proof"
+                subtitle="Latest money proof records included in this report."
+                badge={`${report.moneyRows.length} record(s)`}
+                badgeClass="badge badge-blue"
+              />
+
+              <div className={styles.ledgerList}>
+                {report.moneyRows.slice(0, 8).map((entry, index) => (
+                  <article
+                    key={`${entry.time}-${entry.category}-${index}`}
+                    className={styles.ledgerCard}
                   >
-                    The PDF is generated by the backend from database records.
-                    Use it as a daily proof file for shop activity.
+                    <div className={styles.ledgerTop}>
+                      <div>
+                        <strong>{formatRwf(entry.amountRwf)}</strong>
+                        <span>{formatDate(entry.time)}</span>
+                      </div>
+
+                      <span
+                        className={
+                          entry.direction === "money_in"
+                            ? "badge badge-green"
+                            : entry.direction === "money_out"
+                              ? "badge badge-orange"
+                              : "badge badge-blue"
+                        }
+                      >
+                        {entry.direction}
+                      </span>
+                    </div>
+
+                    <div className={styles.ledgerDetails}>
+                      <LedgerDetail label="Method" value={entry.method} />
+                      <LedgerDetail label="Category" value={entry.category} />
+                      <LedgerDetail label="Actor" value={entry.actorName} />
+                    </div>
+                  </article>
+                ))}
+
+                {report.moneyRows.length === 0 ? (
+                  <div className={styles.emptyCard}>
+                    <ShieldCheck size={18} />
+                    <div>
+                      <strong>No money ledger proof found</strong>
+                      <span>No money movement was recorded for this date.</span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            {hasDownloadableData ? (
+              <section className={styles.downloadReady}>
+                <ShieldCheck size={20} />
+                <div>
+                  <strong>Downloadable PDF proof is ready</strong>
+                  <p>
+                    The PDF is generated from saved database records. Use it as
+                    the daily proof file for shop activity.
                   </p>
                 </div>
-              </div>
-            </section>
-          ) : null}
-        </>
-      ) : null}
+              </section>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </AppShell>
   );
 }
 
+type PanelHeaderProps = {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  badgeClass?: string;
+};
+
+function PanelHeader({
+  title,
+  subtitle,
+  badge,
+  badgeClass = "badge badge-blue",
+}: PanelHeaderProps) {
+  return (
+    <div className={styles.panelHeader}>
+      <div>
+        <div className="table-title">{title}</div>
+        <div className="app-subtitle">{subtitle}</div>
+      </div>
+
+      {badge ? <span className={badgeClass}>{badge}</span> : null}
+    </div>
+  );
+}
+
 type ReportMetricProps = {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   help: string;
@@ -801,16 +699,14 @@ function ReportMetric({
   badgeClass,
 }: ReportMetricProps) {
   return (
-    <div className="premium-stat-card">
-      <div className="stat-card-top">
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
         <div className="feature-icon">{icon}</div>
         <span className={badgeClass}>{badge}</span>
       </div>
 
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ fontSize: 24 }}>
-        {value}
-      </div>
+      <div className={styles.metricValue}>{value}</div>
       <div className="stat-help">{help}</div>
     </div>
   );
@@ -824,51 +720,23 @@ type StatusMiniProps = {
 
 function StatusMini({ label, value, danger = false }: StatusMiniProps) {
   return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        background: "var(--card)",
-        borderRadius: 16,
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          color: "var(--gray-500)",
-          fontSize: 11,
-          fontWeight: 900,
-          textTransform: "uppercase",
-          letterSpacing: "0.4px",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          marginTop: 6,
-          color: danger ? "var(--red)" : "var(--gray-900)",
-          fontSize: 17,
-          fontWeight: 950,
-          letterSpacing: "-0.2px",
-        }}
-      >
-        {value}
-      </div>
+    <div className={styles.statusMini}>
+      <span>{label}</span>
+      <strong className={danger ? styles.dangerValue : ""}>{value}</strong>
     </div>
   );
 }
 
 type ProofRowProps = {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   text: string;
 };
 
 function ProofRow({ icon, title, text }: ProofRowProps) {
   return (
-    <div className="attention-item">
-      {icon}
+    <div className={styles.proofRow}>
+      <div className={styles.rowIcon}>{icon}</div>
       <div>
         <strong>{title}</strong>
         <span>{text}</span>
@@ -885,8 +753,10 @@ type MethodRowProps = {
 
 function MethodRow({ label, moneyIn, moneyOut }: MethodRowProps) {
   return (
-    <div className="attention-item">
-      <Banknote size={17} />
+    <div className={styles.proofRow}>
+      <div className={styles.rowIcon}>
+        <Banknote size={17} />
+      </div>
       <div>
         <strong>{label}</strong>
         <span>
@@ -897,12 +767,33 @@ function MethodRow({ label, moneyIn, moneyOut }: MethodRowProps) {
   );
 }
 
+type ReportItemProps = {
+  icon: ReactNode;
+  title: string;
+  lines: string[];
+};
+
+function ReportItem({ icon, title, lines }: ReportItemProps) {
+  return (
+    <article className={styles.reportItem}>
+      <div className={styles.rowIcon}>{icon}</div>
+
+      <div>
+        <strong>{title}</strong>
+        {lines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 type ReportListPanelProps = {
   title: string;
   subtitle: string;
   emptyTitle: string;
   emptyText: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function ReportListPanel({
@@ -917,20 +808,15 @@ function ReportListPanel({
     : Boolean(children);
 
   return (
-    <section className="table-card premium-panel">
-      <div className="table-card-header">
-        <div>
-          <div className="table-title">{title}</div>
-          <div className="app-subtitle">{subtitle}</div>
-        </div>
-      </div>
+    <section className={styles.panel}>
+      <PanelHeader title={title} subtitle={subtitle} />
 
-      <div className="attention-list">
+      <div className={styles.listBody}>
         {hasChildren ? (
           children
         ) : (
-          <div className="attention-item">
-            <ShieldCheck size={17} />
+          <div className={styles.emptyCard}>
+            <ShieldCheck size={18} />
             <div>
               <strong>{emptyTitle}</strong>
               <span>{emptyText}</span>
@@ -939,5 +825,19 @@ function ReportListPanel({
         )}
       </div>
     </section>
+  );
+}
+
+type LedgerDetailProps = {
+  label: string;
+  value: string;
+};
+
+function LedgerDetail({ label, value }: LedgerDetailProps) {
+  return (
+    <div className={styles.ledgerDetail}>
+      <span>{label}</span>
+      <strong>{value || "Not set"}</strong>
+    </div>
   );
 }

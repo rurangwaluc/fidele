@@ -11,14 +11,15 @@ import {
   RefreshCw,
   ShieldCheck,
   ShoppingCart,
-  Users,
   WalletCards,
 } from "lucide-react";
 import { AuthUser, getCurrentUser, getToken } from "@/lib/auth";
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { ProblemSeverity, ShopProblem, getProblems } from "@/lib/problems";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
+import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 function getTodayDate() {
@@ -108,6 +109,10 @@ export default function ProblemsPage() {
     [problems],
   );
 
+  const hasProblems = problems.length > 0;
+  const hasUrgentWork =
+    criticalProblems.length > 0 || warningProblems.length > 0;
+
   useEffect(() => {
     loadProblems(businessDate);
   }, []);
@@ -155,289 +160,233 @@ export default function ProblemsPage() {
 
   return (
     <AppShell title="Problems">
-      <section className="dashboard-hero">
-        <div>
-          <span className="hero-kicker dashboard-kicker">
-            <AlertTriangle size={15} />
-            Owner attention center
-          </span>
+      <div className={styles.problemsPage}>
+        <section className={`dashboard-hero ${styles.hero}`}>
+          <div className={styles.heroCopy}>
+            <span className="hero-kicker dashboard-kicker">
+              <AlertTriangle size={15} />
+              Owner attention center
+            </span>
 
-          <h1>Problems</h1>
+            <h1>Problems</h1>
 
-          <p>
-            See what needs owner attention: cash, customer payments, expenses,
-            stock, and sales.
-          </p>
-        </div>
-
-        <div className="dashboard-hero-actions">
-          <form
-            onSubmit={handleDateSubmit}
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <input
-              type="date"
-              value={businessDate}
-              onChange={(event) => setBusinessDate(event.target.value)}
-              style={{
-                height: 40,
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                background: "var(--card)",
-                color: "var(--gray-900)",
-                padding: "0 12px",
-                fontWeight: 800,
-              }}
-            />
-
-            <button className="btn btn-outline" type="submit">
-              <RefreshCw size={14} />
-              Check date
-            </button>
-          </form>
-
-          <button
-            className="btn btn-outline"
-            type="button"
-            onClick={() => loadProblems(businessDate)}
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-        </div>
-      </section>
-
-      {message ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            fontWeight: 900,
-            color: "var(--gray-700)",
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
-      {!canViewProblems && user ? (
-        <div
-          className="table-card premium-panel"
-          style={{
-            marginBottom: 18,
-            padding: 16,
-            borderColor: "rgba(245, 158, 11, 0.35)",
-            background: "var(--gold-lt)",
-            color: "var(--gray-900)",
-            fontWeight: 800,
-          }}
-        >
-          You do not have permission to view shop problems.
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="loading-card">
-          <Loader2 className="spin" size={18} />
-          <div>
-            <strong>Checking shop problems...</strong>
-            <p>Looking at cash, payments, expenses, stock, and sales.</p>
+            <p>
+              See what needs owner attention: cash, customer payments, expenses,
+              stock, and sales.
+            </p>
           </div>
-        </div>
-      ) : null}
 
-      {!loading ? (
-        <>
-          <section
-            className="table-card premium-panel"
-            style={{
-              marginBottom: 18,
-              padding: 18,
-              borderColor:
-                criticalProblems.length > 0 || warningProblems.length > 0
-                  ? "rgba(245, 158, 11, 0.35)"
-                  : "rgba(34, 197, 94, 0.28)",
-              background:
-                criticalProblems.length > 0 || warningProblems.length > 0
-                  ? "var(--gold-lt)"
-                  : "var(--green-lt)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.4fr repeat(3, minmax(0, 1fr))",
-                gap: 14,
-                alignItems: "center",
-              }}
+          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
+            <form onSubmit={handleDateSubmit} className={styles.dateForm}>
+              <input
+                type="date"
+                value={businessDate}
+                onChange={(event) => setBusinessDate(event.target.value)}
+              />
+
+              <button className="btn btn-outline" type="submit">
+                <RefreshCw size={14} />
+                Check date
+              </button>
+            </form>
+
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => loadProblems(businessDate)}
             >
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <div className="feature-icon" style={{ marginBottom: 0 }}>
-                  {problems.length === 0 ? (
-                    <CheckCircle2 size={21} />
-                  ) : (
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+          </div>
+        </section>
+
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
+        {!canViewProblems && user ? (
+          <div className={styles.permissionNotice}>
+            <ShieldCheck size={20} />
+            <div>
+              <strong>No access</strong>
+              <span>You do not have permission to view shop problems.</span>
+            </div>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="loading-card">
+            <Loader2 className="spin" size={18} />
+            <div>
+              <strong>Checking shop problems...</strong>
+              <p>Looking at cash, payments, expenses, stock, and sales.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && canViewProblems ? (
+          <>
+            <section
+              className={
+                hasUrgentWork
+                  ? styles.summaryCardWarning
+                  : styles.summaryCardClean
+              }
+            >
+              <div className={styles.summaryIntro}>
+                <div className="feature-icon">
+                  {hasProblems ? (
                     <AlertTriangle size={21} />
+                  ) : (
+                    <CheckCircle2 size={21} />
                   )}
                 </div>
 
                 <div>
-                  <div
-                    style={{
-                      color: "var(--gray-900)",
-                      fontSize: 18,
-                      fontWeight: 950,
-                      letterSpacing: "-0.3px",
-                    }}
-                  >
-                    {problems.length === 0
-                      ? "The shop looks clean right now."
-                      : "Some things need attention."}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 5,
-                      color: "var(--gray-600)",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {problems.length === 0
-                      ? "No urgent issue was found for this date."
-                      : "Start with urgent items, then review warnings before closing the day."}
-                  </div>
+                  <strong>
+                    {hasProblems
+                      ? "Some things need attention."
+                      : "The shop looks clean right now."}
+                  </strong>
+                  <span>
+                    {hasProblems
+                      ? "Start with urgent items, then review warnings before closing the day."
+                      : "No urgent issue was found for this date."}
+                  </span>
                 </div>
               </div>
 
-              <StatusMini
+              <div className={styles.statusGrid}>
+                <StatusMini
+                  label="Urgent"
+                  value={String(criticalProblems.length)}
+                  danger={criticalProblems.length > 0}
+                />
+
+                <StatusMini
+                  label="Needs review"
+                  value={String(warningProblems.length)}
+                  danger={warningProblems.length > 0}
+                />
+
+                <StatusMini label="Notes" value={String(infoProblems.length)} />
+
+                <StatusMini
+                  label="Total problems"
+                  value={String(problems.length)}
+                  danger={problems.length > 0}
+                />
+              </div>
+            </section>
+
+            <div className={styles.metricsGrid}>
+              <ProblemMetric
+                icon={<AlertTriangle size={20} />}
                 label="Urgent"
                 value={String(criticalProblems.length)}
-                danger={criticalProblems.length > 0}
+                help="Needs owner action first"
+                badge="Now"
+                badgeClass={
+                  criticalProblems.length > 0
+                    ? "badge badge-orange"
+                    : "badge badge-green"
+                }
               />
-              <StatusMini
+
+              <ProblemMetric
+                icon={<Clock3 size={20} />}
                 label="Needs review"
                 value={String(warningProblems.length)}
-                danger={warningProblems.length > 0}
+                help="Check before closing day"
+                badge="Review"
+                badgeClass={
+                  warningProblems.length > 0
+                    ? "badge badge-orange"
+                    : "badge badge-green"
+                }
               />
-              <StatusMini
-                label="Total problems"
-                value={String(problems.length)}
+
+              <ProblemMetric
+                icon={<ShieldCheck size={20} />}
+                label="Notes"
+                value={String(infoProblems.length)}
+                help="Useful things to know"
+                badge="Info"
+                badgeClass="badge badge-blue"
+              />
+
+              <ProblemMetric
+                icon={<CheckCircle2 size={20} />}
+                label="Clean areas"
+                value={String(cleanAreas.length)}
+                help={
+                  cleanAreas.length > 0 ? cleanAreas.join(", ") : "None yet"
+                }
+                badge="Clean"
+                badgeClass="badge badge-green"
               />
             </div>
-          </section>
-
-          <div className="premium-stats-grid">
-            <ProblemMetric
-              icon={<AlertTriangle size={20} />}
-              label="Urgent"
-              value={String(criticalProblems.length)}
-              help="Needs owner action first"
-              badge="Now"
-              badgeClass={
-                criticalProblems.length > 0
-                  ? "badge badge-orange"
-                  : "badge badge-green"
-              }
-            />
-
-            <ProblemMetric
-              icon={<Clock3 size={20} />}
-              label="Needs review"
-              value={String(warningProblems.length)}
-              help="Check before closing day"
-              badge="Review"
-              badgeClass={
-                warningProblems.length > 0
-                  ? "badge badge-orange"
-                  : "badge badge-green"
-              }
-            />
-
-            <ProblemMetric
-              icon={<ShieldCheck size={20} />}
-              label="Notes"
-              value={String(infoProblems.length)}
-              help="Useful things to know"
-              badge="Info"
-              badgeClass="badge badge-blue"
-            />
-
-            <ProblemMetric
-              icon={<CheckCircle2 size={20} />}
-              label="Clean areas"
-              value={String(cleanAreas.length)}
-              help={cleanAreas.length > 0 ? cleanAreas.join(", ") : "None yet"}
-              badge="Clean"
-              badgeClass="badge badge-green"
-            />
-          </div>
-
-          <ProblemSection
-            title="Start here"
-            subtitle="Most important problems to fix first."
-            emptyTitle="No urgent problem"
-            emptyText="There is no urgent item for this date."
-            problems={urgentProblems}
-            onAction={(href) => router.push(href)}
-          />
-
-          <div className="dashboard-grid" style={{ marginTop: 18 }}>
-            <ProblemSection
-              title="Customer payments"
-              subtitle="Overdue payments, payments due today, and installments."
-              emptyTitle="No customer payment problem"
-              emptyText="Customer payments look clean."
-              problems={debtProblems}
-              onAction={(href) => router.push(href)}
-            />
 
             <ProblemSection
-              title="Stock problems"
-              subtitle="Products with low or zero stock."
-              emptyTitle="No stock problem"
-              emptyText="Stock looks clean."
-              problems={stockProblems}
+              title="Start here"
+              subtitle="Most important problems to fix first."
+              emptyTitle="No urgent problem"
+              emptyText="There is no urgent item for this date."
+              problems={urgentProblems}
               onAction={(href) => router.push(href)}
+              featured
             />
-          </div>
 
-          <div className="dashboard-grid" style={{ marginTop: 18 }}>
+            <div className={styles.sectionGrid}>
+              <ProblemSection
+                title="Customer payments"
+                subtitle="Overdue payments, payments due today, and installments."
+                emptyTitle="No customer payment problem"
+                emptyText="Customer payments look clean."
+                problems={debtProblems}
+                onAction={(href) => router.push(href)}
+              />
+
+              <ProblemSection
+                title="Stock problems"
+                subtitle="Products with low or zero stock."
+                emptyTitle="No stock problem"
+                emptyText="Stock looks clean."
+                problems={stockProblems}
+                onAction={(href) => router.push(href)}
+              />
+            </div>
+
+            <div className={styles.sectionGrid}>
+              <ProblemSection
+                title="Expense approvals"
+                subtitle="Expenses waiting for owner review."
+                emptyTitle="No expense problem"
+                emptyText="No expense needs attention."
+                problems={expenseProblems}
+                onAction={(href) => router.push(href)}
+              />
+
+              <ProblemSection
+                title="Cash problems"
+                subtitle="Cash opening, closing, differences, and reopened cash."
+                emptyTitle="No cash problem"
+                emptyText="Cash looks clean."
+                problems={cashProblems}
+                onAction={(href) => router.push(href)}
+              />
+            </div>
+
             <ProblemSection
-              title="Expense approvals"
-              subtitle="Expenses waiting for owner review."
-              emptyTitle="No expense problem"
-              emptyText="No expense needs attention."
-              problems={expenseProblems}
+              title="Sales notes"
+              subtitle="Sales that still need attention."
+              emptyTitle="No sales problem"
+              emptyText="Sales look clean."
+              problems={salesProblems}
               onAction={(href) => router.push(href)}
             />
-
-            <ProblemSection
-              title="Cash problems"
-              subtitle="Cash opening, closing, differences, and reopened cash."
-              emptyTitle="No cash problem"
-              emptyText="Cash looks clean."
-              problems={cashProblems}
-              onAction={(href) => router.push(href)}
-            />
-          </div>
-
-          <ProblemSection
-            title="Sales notes"
-            subtitle="Sales that still need attention."
-            emptyTitle="No sales problem"
-            emptyText="Sales look clean."
-            problems={salesProblems}
-            onAction={(href) => router.push(href)}
-          />
-        </>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </AppShell>
   );
 }
@@ -450,37 +399,9 @@ type StatusMiniProps = {
 
 function StatusMini({ label, value, danger = false }: StatusMiniProps) {
   return (
-    <div
-      style={{
-        border: "1px solid var(--border)",
-        background: "var(--card)",
-        borderRadius: 16,
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          color: "var(--gray-500)",
-          fontSize: 11,
-          fontWeight: 900,
-          textTransform: "uppercase",
-          letterSpacing: "0.4px",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          marginTop: 6,
-          color: danger ? "var(--red)" : "var(--gray-900)",
-          fontSize: 17,
-          fontWeight: 950,
-          letterSpacing: "-0.2px",
-        }}
-      >
-        {value}
-      </div>
+    <div className={styles.statusMini}>
+      <span>{label}</span>
+      <strong className={danger ? styles.dangerValue : ""}>{value}</strong>
     </div>
   );
 }
@@ -503,14 +424,14 @@ function ProblemMetric({
   badgeClass,
 }: ProblemMetricProps) {
   return (
-    <div className="premium-stat-card">
-      <div className="stat-card-top">
+    <div className={styles.metricCard}>
+      <div className={styles.metricTop}>
         <div className="feature-icon">{icon}</div>
         <span className={badgeClass}>{badge}</span>
       </div>
 
       <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
+      <div className={styles.metricValue}>{value}</div>
       <div className="stat-help">{help}</div>
     </div>
   );
@@ -523,6 +444,7 @@ type ProblemSectionProps = {
   emptyText: string;
   problems: ShopProblem[];
   onAction: (href: string) => void;
+  featured?: boolean;
 };
 
 function ProblemSection({
@@ -532,10 +454,17 @@ function ProblemSection({
   emptyText,
   problems,
   onAction,
+  featured = false,
 }: ProblemSectionProps) {
   return (
-    <section className="table-card premium-panel" style={{ marginTop: 18 }}>
-      <div className="table-card-header">
+    <section
+      className={
+        featured
+          ? `${styles.problemSection} ${styles.featuredSection}`
+          : styles.problemSection
+      }
+    >
+      <div className={styles.sectionHeader}>
         <div>
           <div className="table-title">{title}</div>
           <div className="app-subtitle">{subtitle}</div>
@@ -550,37 +479,36 @@ function ProblemSection({
         </span>
       </div>
 
-      <div className="attention-list">
+      <div className={styles.problemList}>
         {problems.map((problem) => (
-          <div key={problem.id} className="attention-item">
-            {getProblemIcon(problem)}
+          <article key={problem.id} className={styles.problemCard}>
+            <div className={styles.problemIcon}>{getProblemIcon(problem)}</div>
 
-            <div>
-              <strong>{problem.title}</strong>
-              <span>{problem.message}</span>
+            <div className={styles.problemContent}>
+              <div className={styles.problemTitleRow}>
+                <strong>{problem.title}</strong>
+                <span className={getSeverityBadge(problem.severity)}>
+                  {getSeverityLabel(problem.severity)}
+                </span>
+              </div>
+
+              <p>{problem.message}</p>
               <span>Detected {formatDate(problem.detectedAt)}</span>
             </div>
 
-            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              <span className={getSeverityBadge(problem.severity)}>
-                {getSeverityLabel(problem.severity)}
-              </span>
-
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={() => onAction(problem.actionHref)}
-                style={{ height: 34 }}
-              >
-                {problem.actionLabel}
-              </button>
-            </div>
-          </div>
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => onAction(problem.actionHref)}
+            >
+              {problem.actionLabel}
+            </button>
+          </article>
         ))}
 
         {problems.length === 0 ? (
-          <div className="attention-item">
-            <CheckCircle2 size={17} />
+          <div className={styles.emptyCard}>
+            <CheckCircle2 size={18} />
             <div>
               <strong>{emptyTitle}</strong>
               <span>{emptyText}</span>

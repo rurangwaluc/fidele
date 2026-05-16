@@ -1,0 +1,540 @@
+.staffPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.listPanel {
+  overflow: hidden;
+}
+
+.listHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar :global(.hdr-search) {
+  flex: 1 1 260px;
+  width: 100%;
+}
+
+.staffGrid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.staffCard {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+}
+
+.staffCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.staffIdentity {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.staffIcon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.ownerIcon {
+  color: var(--green);
+  background: var(--green-lt);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.staffIdentity h3 {
+  margin: 0;
+  color: var(--gray-900);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.staffIdentity p {
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.staffIdentity span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-400);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cardActionButton {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--gray-700);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.cardActionButton:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--orange);
+}
+
+.protectedText {
+  color: var(--gray-400);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ownerControlBox {
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.ownerControlBox svg {
+  flex: 0 0 auto;
+  color: var(--green);
+  margin-top: 2px;
+}
+
+.ownerControlBox strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.ownerControlBox span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.responsibilityBlock {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.responsibilityBlock > span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10.5px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.responsibilityBlock > strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.responsibilityBadges {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 30px 16px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  color: var(--gray-500);
+}
+
+.emptyState svg {
+  color: var(--orange);
+}
+
+.emptyState strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyState span {
+  max-width: 460px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.loadMoreBox {
+  padding: 0 16px 16px;
+}
+
+.loadMoreBox :global(.btn) {
+  width: 100%;
+}
+
+.passwordField {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.passwordInput {
+  min-width: 0;
+  flex: 1;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--gray-900);
+  padding: 0 12px;
+  font-weight: 750;
+  outline: none;
+}
+
+.passwordToggle {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  color: var(--gray-600);
+  cursor: pointer;
+}
+
+.responsibilityGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.responsibilityCard {
+  min-width: 0;
+  min-height: 96px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  color: var(--gray-900);
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.responsibilityCard:hover {
+  background: var(--card);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: var(--sh);
+  transform: translateY(-1px);
+}
+
+.responsibilityCard strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.responsibilityCard p {
+  margin-top: 5px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.responsibilityCard svg {
+  flex: 0 0 auto;
+  color: var(--green);
+  margin-top: 1px;
+}
+
+.responsibilityCardSelected {
+  background: var(--orange-lt);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: var(--sh-sm);
+}
+
+.staffPage :global(.staff-form-group),
+.staffPage :global(.staff-form-group input),
+.staffPage :global(.staff-form-group select),
+.staffPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .staffGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staffGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn) {
+    width: 100%;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .listHeaderRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toolbar {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar :global(.btn) {
+    width: 100%;
+  }
+
+  .staffGrid {
+    padding: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .staffCard {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .staffIdentity {
+    gap: 10px;
+  }
+
+  .staffIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .responsibilityGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .responsibilityCard {
+    min-height: auto;
+    padding: 13px;
+  }
+
+  .loadMoreBox {
+    padding: 0 12px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+
+  .staffCardTop {
+    gap: 10px;
+  }
+
+  .badgeRow {
+    gap: 6px;
+  }
+}

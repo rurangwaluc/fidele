@@ -1,0 +1,495 @@
+.problemsPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.dateForm {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dateForm input {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--gray-900);
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.permissionNotice {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+}
+
+.permissionNotice svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+.permissionNotice strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.permissionNotice span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.summaryCardClean,
+.summaryCardWarning {
+  margin-bottom: 18px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr);
+  gap: 16px;
+  align-items: center;
+  border-radius: 18px;
+  box-shadow: var(--sh);
+}
+
+.summaryCardClean {
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: var(--green-lt);
+}
+
+.summaryCardWarning {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+}
+
+.summaryIntro {
+  min-width: 0;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.summaryIntro :global(.feature-icon) {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.summaryIntro strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+}
+
+.summaryIntro span {
+  display: block;
+  margin-top: 5px;
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.statusGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statusMini {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.statusMini span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.statusMini strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-900);
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.statusMini .dangerValue,
+.dangerValue {
+  color: var(--red);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.problemSection {
+  min-width: 0;
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+  overflow: hidden;
+}
+
+.sectionGrid .problemSection {
+  margin-top: 0;
+}
+
+.featuredSection {
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+.sectionHeader {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.problemList {
+  padding: 12px 16px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.problemCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 16px;
+}
+
+.problemIcon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .problemIcon {
+  color: #fbbf24;
+}
+
+.problemContent {
+  min-width: 0;
+}
+
+.problemTitleRow {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.problemTitleRow strong {
+  min-width: 0;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.problemTitleRow :global(.badge) {
+  flex: 0 0 auto;
+}
+
+.problemContent p {
+  margin-top: 5px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.problemContent > span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-400);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.problemCard :global(.btn) {
+  height: 36px;
+  flex: 0 0 auto;
+}
+
+.emptyCard {
+  min-width: 0;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid var(--border);
+  background: var(--green-lt);
+  border-radius: 16px;
+}
+
+.emptyCard svg {
+  flex: 0 0 auto;
+  color: var(--green);
+  margin-top: 2px;
+}
+
+.emptyCard strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.emptyCard span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .summaryCardClean,
+  .summaryCardWarning {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 980px) {
+  .sectionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn),
+  .dateForm,
+  .dateForm input,
+  .dateForm :global(.btn) {
+    width: 100%;
+  }
+
+  .dateForm {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .summaryCardClean,
+  .summaryCardWarning {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .summaryIntro {
+    align-items: flex-start;
+  }
+
+  .summaryIntro strong {
+    font-size: 16px;
+  }
+
+  .statusGrid,
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .sectionHeader {
+    padding: 14px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .problemList {
+    padding: 10px 12px 14px;
+  }
+
+  .problemCard {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .problemCard :global(.btn) {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .problemTitleRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricValue {
+    font-size: 20px;
+  }
+
+  .problemIcon {
+    width: 36px;
+    height: 36px;
+  }
+}

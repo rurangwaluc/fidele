@@ -1,0 +1,578 @@
+.expensesPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.noticeCard {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+}
+
+.noticeContent {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.noticeContent svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+}
+
+.noticeContent strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.noticeContent p {
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 23px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.listPanel {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+  overflow: hidden;
+}
+
+.panelHeader {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelHeader > div {
+  min-width: 0;
+}
+
+.filterBar {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.filterForm {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 220px) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.filterForm :global(.hdr-search) {
+  width: 100%;
+}
+
+.filterForm select {
+  height: 40px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--gray-900);
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.expenseList {
+  padding: 12px 16px 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.expenseCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+}
+
+.expenseIcon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+[data-theme="dark"] .expenseIcon {
+  color: #fbbf24;
+}
+
+.expenseMain {
+  min-width: 0;
+}
+
+.expenseTop {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.expenseTop strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.expenseTop span:not(:global(.badge)) {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.expenseTopBadges {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.expenseDescription {
+  margin-top: 10px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.expenseDetailsGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detailBlock {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 13px;
+  padding: 10px;
+}
+
+.detailBlock span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.detailBlock strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--gray-900);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
+
+.detailBlock .amountText,
+.amountText {
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  text-transform: none;
+}
+
+.rejectionBox {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  background: var(--orange-lt);
+  border-radius: 14px;
+}
+
+.rejectionBox strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.rejectionBox span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.cardAction {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 90px;
+}
+
+.cardAction :global(.hdr-icon) {
+  width: 34px;
+  height: 34px;
+}
+
+.cardAction span {
+  color: var(--gray-400);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.emptyCard {
+  min-width: 0;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 16px;
+}
+
+.emptyCard svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+.emptyCard strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyCard span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.loadMoreWrap {
+  padding: 0 16px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.loadMoreWrap :global(.btn) {
+  min-width: 210px;
+}
+
+.modalWarning {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--gold-lt);
+  color: var(--gray-900);
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.rejectSummary {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--gray-50);
+  color: var(--gray-900);
+}
+
+.rejectSummary strong {
+  display: block;
+  margin-top: 8px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.rejectSummary span {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-600);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.expensesPage :global(.staff-form-group),
+.expensesPage :global(.staff-form-group input),
+.expensesPage :global(.staff-form-group select),
+.expensesPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+.expensesPage :global(.staff-form-group textarea) {
+  min-height: 96px;
+}
+
+@media (max-width: 1180px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterForm {
+    grid-template-columns: 1fr 220px;
+  }
+
+  .filterForm :global(.btn) {
+    width: 100%;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .expenseDetailsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn) {
+    width: 100%;
+  }
+
+  .noticeCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .noticeCard :global(.btn) {
+    width: 100%;
+  }
+
+  .noticeContent {
+    align-items: flex-start;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .panelHeader {
+    padding: 14px;
+    flex-direction: column;
+  }
+
+  .filterBar {
+    padding: 14px;
+  }
+
+  .filterForm {
+    grid-template-columns: 1fr;
+  }
+
+  .filterForm select,
+  .filterForm :global(.btn) {
+    width: 100%;
+  }
+
+  .expenseList {
+    padding: 10px 12px 14px;
+  }
+
+  .expenseCard {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .expenseTop {
+    flex-direction: column;
+  }
+
+  .expenseTopBadges {
+    justify-content: flex-start;
+  }
+
+  .expenseDetailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardAction {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+    min-width: 0;
+  }
+
+  .cardAction :global(.hdr-icon) {
+    width: 100%;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .cardAction span {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+  }
+
+  .loadMoreWrap {
+    padding: 0 12px 14px;
+  }
+
+  .loadMoreWrap :global(.btn) {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+
+  .expenseIcon {
+    width: 38px;
+    height: 38px;
+  }
+}

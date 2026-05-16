@@ -1,0 +1,506 @@
+.settingsPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.ownerOnlyNotice {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+}
+
+.ownerOnlyNotice svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+.ownerOnlyNotice strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.ownerOnlyNotice span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.setupCard {
+  margin-bottom: 18px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+  border-radius: 18px;
+  box-shadow: var(--sh);
+}
+
+.setupIntro {
+  min-width: 0;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.setupIntro :global(.feature-icon) {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.setupIntro strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+}
+
+.setupIntro span {
+  display: block;
+  margin-top: 5px;
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.statusGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statusMini {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.statusMini span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.statusMini strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-900);
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.businessPanel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sideStack {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.formBody {
+  padding: 16px;
+  display: grid;
+  gap: 18px;
+}
+
+.formGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.bankSection {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.sectionTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.sectionTop p {
+  margin-top: 5px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.bankList {
+  display: grid;
+  gap: 12px;
+}
+
+.bankCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--gray-50);
+}
+
+.bankCardTop {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.bankCardTop strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyBankCard {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px dashed var(--border);
+  background: var(--gray-50);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.emptyBankCard svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+.emptyBankCard strong {
+  display: block;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.emptyBankCard span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.cashRule,
+.cashRuleChecked {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.cashRule {
+  background: var(--gray-50);
+}
+
+.cashRuleChecked {
+  border-color: rgba(34, 197, 94, 0.24);
+  background: var(--green-lt);
+}
+
+.cashRule:hover,
+.cashRuleChecked:hover {
+  box-shadow: var(--sh-sm);
+  transform: translateY(-1px);
+}
+
+.cashRule :global(.feature-icon),
+.cashRuleChecked :global(.feature-icon) {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.cashRuleText {
+  min-width: 0;
+  flex: 1;
+}
+
+.cashRuleText strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.cashRuleText span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.ruleControl {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ruleControl svg {
+  color: var(--green);
+}
+
+.ruleControl input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--green);
+}
+
+.settingsPage :global(.staff-form-group),
+.settingsPage :global(.staff-form-group input),
+.settingsPage :global(.staff-form-group select),
+.settingsPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .settingsGrid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(420px, 0.55fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .setupCard,
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn) {
+    width: 100%;
+  }
+
+  .setupCard {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .setupIntro {
+    align-items: flex-start;
+  }
+
+  .setupIntro strong {
+    font-size: 16px;
+  }
+
+  .statusGrid,
+  .metricsGrid,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+
+  .formBody {
+    padding: 14px;
+    gap: 16px;
+  }
+
+  .sectionTop,
+  .bankCardTop {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sectionTop :global(.btn),
+  .bankCardTop :global(.btn) {
+    width: 100%;
+  }
+
+  .formFooter {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .formFooter :global(button) {
+    width: 100%;
+  }
+
+  .cashRule,
+  .cashRuleChecked {
+    align-items: flex-start;
+  }
+
+  .ruleControl {
+    margin-top: 2px;
+  }
+}
