@@ -1096,18 +1096,40 @@ export default function SalesPage() {
               </section>
 
               <section className={styles.summaryBox}>
-                <div className="staff-form-section-title">Sale summary</div>
+                <div className={styles.summaryHeader}>
+                  <div>
+                    <div className="staff-form-section-title">Sale summary</div>
+                    <p>Confirm money before saving the sale.</p>
+                  </div>
 
-                <div className={styles.summaryGrid}>
-                  <SummaryItem
-                    label="Total"
-                    value={formatRwf(totalAmountRwf)}
-                  />
-                  <SummaryItem
+                  <span
+                    className={
+                      balanceRwf > 0
+                        ? "badge badge-orange"
+                        : "badge badge-green"
+                    }
+                  >
+                    {balanceRwf > 0 ? "Balance left" : "Fully paid"}
+                  </span>
+                </div>
+
+                <div className={styles.summaryTotalCard}>
+                  <span>Total sale amount</span>
+                  <strong>{formatRwf(totalAmountRwf)}</strong>
+                </div>
+
+                <div className={styles.summaryMoneyGrid}>
+                  <SummaryMoneyItem
                     label="Paid now"
                     value={formatRwf(finalAmountPaidRwf)}
+                    tone="paid"
                   />
-                  <SummaryItem label="Balance" value={formatRwf(balanceRwf)} />
+
+                  <SummaryMoneyItem
+                    label="Balance"
+                    value={formatRwf(balanceRwf)}
+                    tone={balanceRwf > 0 ? "balance" : "clear"}
+                  />
                 </div>
 
                 <div className={styles.summaryBadges}>
@@ -1310,6 +1332,28 @@ type SummaryItemProps = {
   label: string;
   value: string;
 };
+
+type SummaryMoneyItemProps = {
+  label: string;
+  value: string;
+  tone: "paid" | "balance" | "clear";
+};
+
+function SummaryMoneyItem({ label, value, tone }: SummaryMoneyItemProps) {
+  return (
+    <div
+      className={cx(
+        styles.summaryMoneyItem,
+        tone === "paid" && styles.summaryMoneyPaid,
+        tone === "balance" && styles.summaryMoneyBalance,
+        tone === "clear" && styles.summaryMoneyClear,
+      )}
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
 
 function SummaryItem({ label, value }: SummaryItemProps) {
   return (

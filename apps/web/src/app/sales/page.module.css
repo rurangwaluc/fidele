@@ -414,9 +414,158 @@
 
 .summaryBox {
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 22px;
   padding: 16px;
-  background: var(--gray-50);
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(245, 158, 11, 0.1),
+      transparent 36%
+    ),
+    var(--gray-50);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.summaryHeader p {
+  margin-top: 5px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.summaryTotalCard {
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--card);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--sh-sm);
+}
+
+.summaryTotalCard span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryTotalCard strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--gray-900);
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 950;
+  letter-spacing: -1.2px;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.summaryMoneyGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryMoneyItem {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.summaryMoneyItem span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.summaryMoneyItem strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--gray-900);
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 950;
+  letter-spacing: -0.7px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.summaryMoneyPaid {
+  border-color: rgba(34, 197, 94, 0.24);
+  background: var(--green-lt);
+}
+
+.summaryMoneyBalance {
+  border-color: rgba(249, 115, 22, 0.26);
+  background: var(--orange-lt);
+}
+
+.summaryMoneyClear {
+  border-color: rgba(34, 197, 94, 0.24);
+  background: var(--green-lt);
+}
+
+.summaryBadges {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .summaryBox {
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .summaryHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summaryHeader :global(.badge) {
+    width: fit-content;
+  }
+
+  .summaryMoneyGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryTotalCard {
+    padding: 15px;
+  }
+
+  .summaryTotalCard strong {
+    font-size: 30px;
+  }
+
+  .summaryMoneyItem strong {
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 420px) {
+  .summaryTotalCard strong {
+    font-size: 28px;
+  }
+
+  .summaryMoneyItem strong {
+    font-size: 21px;
+  }
 }
 
 .summaryGrid {
