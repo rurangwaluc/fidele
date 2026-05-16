@@ -1,0 +1,651 @@
+.cashPage {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hero {
+  align-items: center;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroActions {
+  justify-content: flex-end;
+}
+
+.dateInput {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--gray-900);
+  padding: 0 12px;
+  font-weight: 800;
+  min-width: 150px;
+}
+
+.messageBox {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--sh);
+  border-radius: 16px;
+  font-weight: 900;
+  color: var(--gray-700);
+}
+
+.noticeCard {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--gold-lt);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+}
+
+.noticeContent {
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.noticeContent svg {
+  flex: 0 0 auto;
+  color: var(--orange);
+}
+
+.noticeContent strong {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.noticeContent p {
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.metricCard {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--sh);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.metricTop :global(.feature-icon) {
+  margin-bottom: 0;
+}
+
+.metricValue {
+  color: var(--gray-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.78fr);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.panel,
+.proofPanel,
+.ledgerPanel {
+  overflow: hidden;
+}
+
+.methodGrid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.methodCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+}
+
+.methodTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.methodIcon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.methodTop strong {
+  color: var(--gray-900);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.methodMoneyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.miniMoney,
+.proofItem {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 11px;
+}
+
+.miniMoney span,
+.proofItem span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10.5px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.miniMoney strong,
+.proofItem strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-900);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.miniMoneyIn,
+.proofItemSuccess {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: var(--green-lt);
+}
+
+.miniMoneyOut,
+.proofItemWarning {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: var(--orange-lt);
+}
+
+.quickGrid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quickAction,
+.quickActionStatic {
+  min-width: 0;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  color: var(--gray-900);
+}
+
+.quickAction {
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.quickAction:hover:not(:disabled) {
+  background: var(--card);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: var(--sh);
+  transform: translateY(-1px);
+}
+
+.quickAction:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.quickAction svg,
+.quickActionStatic svg {
+  margin-bottom: 10px;
+  color: var(--orange);
+}
+
+.quickAction span,
+.quickActionStatic span {
+  display: block;
+  color: var(--gray-900);
+  font-weight: 950;
+  margin-bottom: 4px;
+}
+
+.quickAction small,
+.quickActionStatic small {
+  display: block;
+  color: var(--gray-500);
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.proofPanel {
+  margin-bottom: 18px;
+}
+
+.proofGrid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ledgerToolbar {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ledgerToolbar :global(.hdr-search) {
+  flex: 1 1 260px;
+  width: 100%;
+}
+
+.ledgerList {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ledgerCard {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+  display: grid;
+  gap: 14px;
+}
+
+.ledgerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ledgerIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ledgerIcon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--orange);
+  background: var(--orange-lt);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.ledgerIconIn {
+  color: var(--green);
+  background: var(--green-lt);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.ledgerIconOut {
+  color: var(--orange);
+  background: var(--orange-lt);
+  border-color: rgba(249, 115, 22, 0.24);
+}
+
+.ledgerIdentity h3 {
+  margin: 0;
+  color: var(--gray-900);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.ledgerIdentity p {
+  margin-top: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.ledgerInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ledgerDescription {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.ledgerDescription span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 10.5px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.ledgerDescription strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 30px 16px;
+  border: 1px solid var(--border);
+  background: var(--gray-50);
+  border-radius: 18px;
+  color: var(--gray-500);
+}
+
+.emptyState svg {
+  color: var(--orange);
+}
+
+.emptyState strong {
+  color: var(--gray-900);
+  font-weight: 950;
+}
+
+.emptyState span {
+  max-width: 460px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.loadMoreBox {
+  padding: 0 16px 16px;
+}
+
+.loadMoreBox :global(.btn) {
+  width: 100%;
+}
+
+.expectedCashBox {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--gray-50);
+}
+
+.expectedCashBox strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--gray-900);
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: -0.8px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.expectedCashBox p {
+  margin-top: 6px;
+  color: var(--gray-500);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.differencePreview {
+  min-width: 0;
+}
+
+.differencePreview span {
+  display: block;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.differencePreview strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.goodDifference {
+  color: var(--green);
+}
+
+.badDifference {
+  color: var(--red);
+}
+
+.cashPage :global(.staff-form-group),
+.cashPage :global(.staff-form-group input),
+.cashPage :global(.staff-form-group select),
+.cashPage :global(.staff-form-group textarea) {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .ledgerList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .proofGrid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .proofGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ledgerList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 25px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .heroActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions :global(.btn),
+  .dateInput {
+    width: 100%;
+  }
+
+  .noticeCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .metricTop {
+    margin-bottom: 10px;
+  }
+
+  .metricTop :global(.feature-icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .metricValue {
+    font-size: 21px;
+  }
+
+  .methodGrid,
+  .quickGrid,
+  .proofGrid,
+  .ledgerList {
+    padding: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .methodCard,
+  .quickAction,
+  .quickActionStatic,
+  .ledgerCard {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .methodMoneyGrid,
+  .ledgerInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ledgerToolbar {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ledgerToolbar :global(.btn) {
+    width: 100%;
+  }
+
+  .ledgerTop {
+    flex-direction: column;
+  }
+
+  .ledgerTop :global(.badge) {
+    width: fit-content;
+  }
+
+  .loadMoreBox {
+    padding: 0 12px 14px;
+  }
+
+  .expectedCashBox strong {
+    font-size: 25px;
+  }
+}
+
+@media (max-width: 420px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricValue {
+    font-size: 20px;
+  }
+}
