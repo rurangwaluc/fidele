@@ -12,7 +12,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("fidele@elc.com");
-  const [password, setPassword] = useState("Elc@12345");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
