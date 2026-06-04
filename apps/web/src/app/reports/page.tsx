@@ -34,6 +34,12 @@ function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
 }
 
+function formatPercent(value: number) {
+  return `${Number(value || 0).toLocaleString("en-US", {
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "Not set";
 
@@ -60,6 +66,17 @@ function hasPermission(user: AuthUser | null, permission: string) {
   if (user.role === "owner") return true;
   if (user.permissions.includes("*")) return true;
   return user.permissions.includes(permission);
+}
+
+function readableDirection(value: string) {
+  if (value === "money_in") return "Money in";
+  if (value === "money_out") return "Money out";
+  return value.replaceAll("_", " ");
+}
+
+function readableMethod(value: string) {
+  if (value === "momo") return "MoMo";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function reportHasDownloadableData(report: DailySummaryReport | null) {
@@ -119,26 +136,44 @@ export default function ReportsPage() {
       };
     }
 
+    const cashDifference = Math.abs(report.cashSession?.differenceRwf || 0);
+
     const problems =
       report.summary.overdueDebtCount +
-      report.summary.lowStockCount +
+      report.summary.zeroStockCount +
       report.summary.pendingExpensesCount +
-      (report.cashSession?.differenceRwf ? 1 : 0);
+      (cashDifference > 0 ? 1 : 0) +
+      (report.summary.netProfitRwf < 0 ? 1 : 0);
 
     if (problems > 0) {
       return {
         label: "Needs attention",
         className: "badge badge-orange",
-        text: `${problems} issue(s) need owner review.`,
+        text: `${problems} issue(s) need owner review before closing this business day.`,
       };
     }
 
     return {
       label: "Clean",
       className: "badge badge-green",
-      text: "No major issue found in this report.",
+      text: "Profit, cash, stock, debts, and approvals look clean for this report.",
     };
   }, [report]);
+
+  const profitBadgeClass =
+    report && report.summary.netProfitRwf >= 0
+      ? "badge badge-green"
+      : "badge badge-orange";
+
+  const grossProfitBadgeClass =
+    report && report.summary.grossProfitRwf >= 0
+      ? "badge badge-green"
+      : "badge badge-orange";
+
+  const cashFlowBadgeClass =
+    report && report.summary.netMoneyMovementRwf >= 0
+      ? "badge badge-green"
+      : "badge badge-orange";
 
   useEffect(() => {
     loadReport(date);
@@ -218,14 +253,14 @@ export default function ReportsPage() {
           <div className={styles.heroCopy}>
             <span className="hero-kicker dashboard-kicker">
               <FileText size={15} />
-              Shop proof reports
+              Owner financial command center
             </span>
 
             <h1>Reports</h1>
 
             <p>
-              View daily shop performance and download professional PDF proof
-              files for sales, cash, debts, expenses, and stock.
+              See profit, loss, money movement, cash proof, debts, expenses, and
+              stock risk from one clean daily control report.
             </p>
           </div>
 
@@ -287,7 +322,7 @@ export default function ReportsPage() {
             <Loader2 className="spin" size={18} />
             <div>
               <strong>Loading report...</strong>
-              <p>Preparing shop summary for {date}.</p>
+              <p>Preparing owner financial summary for {date}.</p>
             </div>
           </div>
         ) : null}
@@ -321,10 +356,12 @@ export default function ReportsPage() {
                 <StatusMini
                   label="Cash session"
                   value={report.cashSession?.status || "Not opened"}
+                  danger={!report.cashSession}
                 />
                 <StatusMini
-                  label="Sales count"
-                  value={String(report.summary.salesCount)}
+                  label="Net profit"
+                  value={formatRwf(report.summary.netProfitRwf)}
+                  danger={report.summary.netProfitRwf < 0}
                 />
                 <StatusMini
                   label="Report status"
@@ -336,12 +373,50 @@ export default function ReportsPage() {
 
             <div className={styles.metricsGrid}>
               <ReportMetric
+                icon={<WalletCards size={20} />}
+                label="Net profit"
+                value={formatRwf(report.summary.netProfitRwf)}
+                help={`${formatPercent(
+                  report.summary.profitMarginPercent,
+                )} profit margin`}
+                badge={report.summary.netProfitRwf >= 0 ? "Profit" : "Loss"}
+                badgeClass={profitBadgeClass}
+              />
+
+              <ReportMetric
+                icon={<Banknote size={20} />}
+                label="Gross profit"
+                value={formatRwf(report.summary.grossProfitRwf)}
+                help="Sales minus estimated inventory cost"
+                badge="Gross"
+                badgeClass={grossProfitBadgeClass}
+              />
+
+              <ReportMetric
                 icon={<ShoppingCart size={20} />}
-                label="Total sales"
+                label="Revenue"
                 value={formatRwf(report.summary.totalSalesRwf)}
                 help={`${report.summary.salesCount} sale(s) recorded`}
                 badge="Sales"
                 badgeClass="badge badge-green"
+              />
+
+              <ReportMetric
+                icon={<ReceiptText size={20} />}
+                label="Approved expenses"
+                value={formatRwf(report.summary.approvedExpensesRwf)}
+                help={`${report.summary.approvedExpensesCount} approved expense(s)`}
+                badge="Expense"
+                badgeClass="badge badge-orange"
+              />
+
+              <ReportMetric
+                icon={<Boxes size={20} />}
+                label="Cost of goods sold"
+                value={formatRwf(report.summary.estimatedCogsRwf)}
+                help="Estimated product cost sold today"
+                badge="COGS"
+                badgeClass="badge badge-blue"
               />
 
               <ReportMetric
@@ -351,7 +426,7 @@ export default function ReportsPage() {
                 help={`Paid on sales: ${formatRwf(
                   report.summary.amountPaidOnSalesRwf,
                 )}`}
-                badge="Money in"
+                badge="Cash in"
                 badgeClass="badge badge-green"
               />
 
@@ -359,22 +434,18 @@ export default function ReportsPage() {
                 icon={<ReceiptText size={20} />}
                 label="Money spent"
                 value={formatRwf(report.summary.moneyOutRwf)}
-                help={`${report.summary.approvedExpensesCount} approved expense(s)`}
-                badge="Money out"
+                help="All approved money-out movement"
+                badge="Cash out"
                 badgeClass="badge badge-orange"
               />
 
               <ReportMetric
                 icon={<WalletCards size={20} />}
-                label="Net movement"
+                label="Net cash flow"
                 value={formatRwf(report.summary.netMoneyMovementRwf)}
-                help="Money received minus money spent"
-                badge="Net"
-                badgeClass={
-                  report.summary.netMoneyMovementRwf >= 0
-                    ? "badge badge-green"
-                    : "badge badge-orange"
-                }
+                help="Cash in minus cash out, not the same as profit"
+                badge="Flow"
+                badgeClass={cashFlowBadgeClass}
               />
 
               <ReportMetric
@@ -383,7 +454,11 @@ export default function ReportsPage() {
                 value={formatRwf(report.summary.openCustomerDebtRwf)}
                 help={`${report.summary.overdueDebtCount} overdue debt(s)`}
                 badge="Debts"
-                badgeClass="badge badge-orange"
+                badgeClass={
+                  report.summary.openCustomerDebtRwf > 0
+                    ? "badge badge-orange"
+                    : "badge badge-green"
+                }
               />
 
               <ReportMetric
@@ -425,6 +500,92 @@ export default function ReportsPage() {
             <div className={styles.reportGrid}>
               <section className={styles.panel}>
                 <PanelHeader
+                  title="Profit and loss"
+                  subtitle="Real business performance, not just money movement."
+                  badge={
+                    report.summary.netProfitRwf >= 0
+                      ? "Profitable"
+                      : "Loss making"
+                  }
+                  badgeClass={profitBadgeClass}
+                />
+
+                <div className={styles.proofList}>
+                  <ProofRow
+                    icon={<ShoppingCart size={17} />}
+                    title="Revenue"
+                    text={formatRwf(report.summary.totalSalesRwf)}
+                  />
+                  <ProofRow
+                    icon={<Boxes size={17} />}
+                    title="Estimated cost of goods sold"
+                    text={formatRwf(report.summary.estimatedCogsRwf)}
+                  />
+                  <ProofRow
+                    icon={<Banknote size={17} />}
+                    title="Gross profit"
+                    text={formatRwf(report.summary.grossProfitRwf)}
+                  />
+                  <ProofRow
+                    icon={<ReceiptText size={17} />}
+                    title="Approved expenses"
+                    text={formatRwf(report.summary.approvedExpensesRwf)}
+                  />
+                  <ProofRow
+                    icon={<WalletCards size={17} />}
+                    title="Net profit / loss"
+                    text={`${formatRwf(
+                      report.summary.netProfitRwf,
+                    )} · ${formatPercent(report.summary.profitMarginPercent)}`}
+                  />
+                </div>
+              </section>
+
+              <section className={styles.panel}>
+                <PanelHeader
+                  title="Money flow"
+                  subtitle="Cash in and cash out across every payment method."
+                  badge={
+                    report.summary.netMoneyMovementRwf >= 0
+                      ? "Positive flow"
+                      : "Negative flow"
+                  }
+                  badgeClass={cashFlowBadgeClass}
+                />
+
+                <div className={styles.proofList}>
+                  <ProofRow
+                    icon={<Banknote size={17} />}
+                    title="Total money in"
+                    text={formatRwf(report.summary.moneyInRwf)}
+                  />
+                  <ProofRow
+                    icon={<ReceiptText size={17} />}
+                    title="Total money out"
+                    text={formatRwf(report.summary.moneyOutRwf)}
+                  />
+                  <ProofRow
+                    icon={<WalletCards size={17} />}
+                    title="Net cash flow"
+                    text={formatRwf(report.summary.netMoneyMovementRwf)}
+                  />
+                  <ProofRow
+                    icon={<Users size={17} />}
+                    title="Debt collected"
+                    text={formatRwf(report.summary.debtPaymentsReceivedRwf)}
+                  />
+                  <ProofRow
+                    icon={<Users size={17} />}
+                    title="New customer debt"
+                    text={formatRwf(report.summary.newCustomerDebtRwf)}
+                  />
+                </div>
+              </section>
+            </div>
+
+            <div className={styles.reportGrid}>
+              <section className={styles.panel}>
+                <PanelHeader
                   title="Cash session proof"
                   subtitle="Drawer control for this business date."
                   badge={report.cashSession?.status || "Not opened"}
@@ -454,6 +615,21 @@ export default function ReportsPage() {
                     text={formatRwf(report.cashSession?.expectedCashRwf || 0)}
                   />
                   <ProofRow
+                    icon={<Banknote size={17} />}
+                    title="Counted cash"
+                    text={
+                      report.cashSession?.countedCashRwf === null ||
+                      report.cashSession?.countedCashRwf === undefined
+                        ? "Not counted"
+                        : formatRwf(report.cashSession.countedCashRwf)
+                    }
+                  />
+                  <ProofRow
+                    icon={<AlertTriangle size={17} />}
+                    title="Cash difference"
+                    text={formatRwf(report.cashSession?.differenceRwf || 0)}
+                  />
+                  <ProofRow
                     icon={<Clock3 size={17} />}
                     title="Closed at"
                     text={formatDate(report.cashSession?.closedAt || null)}
@@ -463,8 +639,10 @@ export default function ReportsPage() {
 
               <section className={styles.panel}>
                 <PanelHeader
-                  title="Payment method breakdown"
-                  subtitle="How money entered and left the shop."
+                  title="Business wallets"
+                  subtitle="Money distribution by payment method."
+                  badge="Payment methods"
+                  badgeClass="badge badge-blue"
                 />
 
                 <div className={styles.proofList}>
@@ -484,15 +662,14 @@ export default function ReportsPage() {
                     moneyOut={report.methodTotals.moneyOut.bank}
                   />
                   <MethodRow
-                    label="Card / Other"
-                    moneyIn={
-                      report.methodTotals.moneyIn.card +
-                      report.methodTotals.moneyIn.other
-                    }
-                    moneyOut={
-                      report.methodTotals.moneyOut.card +
-                      report.methodTotals.moneyOut.other
-                    }
+                    label="Card"
+                    moneyIn={report.methodTotals.moneyIn.card}
+                    moneyOut={report.methodTotals.moneyOut.card}
+                  />
+                  <MethodRow
+                    label="Other"
+                    moneyIn={report.methodTotals.moneyIn.other}
+                    moneyOut={report.methodTotals.moneyOut.other}
                   />
                 </div>
               </section>
@@ -500,8 +677,8 @@ export default function ReportsPage() {
 
             <div className={styles.reportGrid}>
               <ReportListPanel
-                title="Sales in this report"
-                subtitle="Latest sales included in this daily summary."
+                title="Sales proof"
+                subtitle="Latest sales included in this report."
                 emptyTitle="No sales recorded"
                 emptyText="Sales will appear here when the shop sells products."
               >
@@ -515,13 +692,14 @@ export default function ReportsPage() {
                       `Paid: ${formatRwf(sale.amountPaidRwf)} · Balance: ${formatRwf(
                         sale.balanceRwf,
                       )}`,
+                      `Status: ${sale.paymentStatus} · Sold by: ${sale.soldByName}`,
                     ]}
                   />
                 ))}
               </ReportListPanel>
 
               <ReportListPanel
-                title="Expenses in this report"
+                title="Expense proof"
                 subtitle="Approved money-out records for this date."
                 emptyTitle="No approved expenses"
                 emptyText="Expenses will appear here after approval."
@@ -533,7 +711,12 @@ export default function ReportsPage() {
                     title={expense.expenseNumber}
                     lines={[
                       `${expense.title} · ${formatRwf(expense.amountRwf)}`,
-                      `${expense.category} · ${expense.method} · ${expense.status}`,
+                      `${expense.category} · ${readableMethod(
+                        expense.method,
+                      )} · ${expense.status}`,
+                      `Created by: ${expense.createdByName} · Paid: ${formatDate(
+                        expense.paidAt,
+                      )}`,
                     ]}
                   />
                 ))}
@@ -542,8 +725,8 @@ export default function ReportsPage() {
 
             <div className={styles.reportGrid}>
               <ReportListPanel
-                title="Open customer debts"
-                subtitle="Customers who still owe money."
+                title="Customer debt risk"
+                subtitle="Customers who still owe the business money."
                 emptyTitle="No open customer debt"
                 emptyText="Open debts will appear here."
               >
@@ -556,6 +739,9 @@ export default function ReportsPage() {
                       `Balance: ${formatRwf(debt.balanceRwf)} · Sale: ${
                         debt.saleNumber
                       }`,
+                      `Phone: ${debt.customerPhone || "Not set"} · Status: ${
+                        debt.status
+                      }`,
                       `Expected: ${formatDate(debt.expectedPaymentAt)}`,
                     ]}
                   />
@@ -563,8 +749,8 @@ export default function ReportsPage() {
               </ReportListPanel>
 
               <ReportListPanel
-                title="Low-stock products"
-                subtitle="Products that need attention."
+                title="Stock risk"
+                subtitle="Products that need owner attention."
                 emptyTitle="No low-stock product"
                 emptyText="Low-stock products will appear here."
               >
@@ -575,7 +761,7 @@ export default function ReportsPage() {
                     title={product.name}
                     lines={[
                       `SKU: ${product.sku} · Stock: ${product.currentStock}`,
-                      `Alert at ${product.lowStockAlert} · Price ${formatRwf(
+                      `Alert at ${product.lowStockAlert} · Selling price ${formatRwf(
                         product.sellingPriceRwf,
                       )}`,
                     ]}
@@ -586,14 +772,14 @@ export default function ReportsPage() {
 
             <section className={styles.panel}>
               <PanelHeader
-                title="Money ledger proof"
-                subtitle="Latest money proof records included in this report."
+                title="Money movement timeline"
+                subtitle="Chronological flow of money in and out of the business."
                 badge={`${report.moneyRows.length} record(s)`}
                 badgeClass="badge badge-blue"
               />
 
               <div className={styles.ledgerList}>
-                {report.moneyRows.slice(0, 8).map((entry, index) => (
+                {report.moneyRows.slice(0, 10).map((entry, index) => (
                   <article
                     key={`${entry.time}-${entry.category}-${index}`}
                     className={styles.ledgerCard}
@@ -613,15 +799,28 @@ export default function ReportsPage() {
                               : "badge badge-blue"
                         }
                       >
-                        {entry.direction}
+                        {readableDirection(entry.direction)}
                       </span>
                     </div>
 
                     <div className={styles.ledgerDetails}>
-                      <LedgerDetail label="Method" value={entry.method} />
+                      <LedgerDetail
+                        label="Method"
+                        value={readableMethod(entry.method)}
+                      />
                       <LedgerDetail label="Category" value={entry.category} />
                       <LedgerDetail label="Actor" value={entry.actorName} />
                     </div>
+
+                    {entry.description ? (
+                      <div className={styles.proofList}>
+                        <ProofRow
+                          icon={<FileText size={17} />}
+                          title="Description"
+                          text={entry.description}
+                        />
+                      </div>
+                    ) : null}
                   </article>
                 ))}
 
@@ -629,8 +828,10 @@ export default function ReportsPage() {
                   <div className={styles.emptyCard}>
                     <ShieldCheck size={18} />
                     <div>
-                      <strong>No money ledger proof found</strong>
-                      <span>No money movement was recorded for this date.</span>
+                      <strong>No money movement found</strong>
+                      <span>
+                        No money entered or left the shop for this date.
+                      </span>
                     </div>
                   </div>
                 ) : null}
@@ -644,7 +845,8 @@ export default function ReportsPage() {
                   <strong>Downloadable PDF proof is ready</strong>
                   <p>
                     The PDF is generated from saved database records. Use it as
-                    the daily proof file for shop activity.
+                    the daily proof file for sales, profit, expenses, debts,
+                    stock, and cash movement.
                   </p>
                 </div>
               </section>
@@ -752,6 +954,8 @@ type MethodRowProps = {
 };
 
 function MethodRow({ label, moneyIn, moneyOut }: MethodRowProps) {
+  const net = Number(moneyIn || 0) - Number(moneyOut || 0);
+
   return (
     <div className={styles.proofRow}>
       <div className={styles.rowIcon}>
@@ -760,7 +964,8 @@ function MethodRow({ label, moneyIn, moneyOut }: MethodRowProps) {
       <div>
         <strong>{label}</strong>
         <span>
-          Received: {formatRwf(moneyIn)} · Spent: {formatRwf(moneyOut)}
+          Received: {formatRwf(moneyIn)} · Spent: {formatRwf(moneyOut)} · Net:{" "}
+          {formatRwf(net)}
         </span>
       </div>
     </div>

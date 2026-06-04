@@ -31,6 +31,11 @@ export type DailySummaryReport = {
     salesBalanceRwf: number;
     salesCount: number;
 
+    estimatedCogsRwf: number;
+    grossProfitRwf: number;
+    netProfitRwf: number;
+    profitMarginPercent: number;
+
     moneyInRwf: number;
     moneyOutRwf: number;
     netMoneyMovementRwf: number;

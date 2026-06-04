@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "dev": "pnpm -r --parallel dev",
     "dev:api": "pnpm --filter @erc/api dev",
     "build:api": "pnpm --filter @erc/api build",
     "start:api": "pnpm --filter @erc/api start",

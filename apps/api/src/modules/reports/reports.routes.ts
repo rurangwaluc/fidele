@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import {
   cashSessions,
   customerDebts,
@@ -8,6 +8,7 @@ import {
   expenses,
   moneyLedger,
   products,
+  saleItems,
   salePayments,
   sales,
   users,
@@ -62,6 +63,11 @@ type DailySummaryReport = {
     amountPaidOnSalesRwf: number;
     salesBalanceRwf: number;
     salesCount: number;
+
+    estimatedCogsRwf: number;
+    grossProfitRwf: number;
+    netProfitRwf: number;
+    profitMarginPercent: number;
 
     moneyInRwf: number;
     moneyOutRwf: number;
@@ -456,6 +462,36 @@ async function buildDailySummaryReport(input: {
     );
   }, 0);
 
+  const saleIds = salesRows.map((row) => row.id);
+
+  const soldItemRows =
+    saleIds.length > 0
+      ? await db
+          .select({
+            quantity: saleItems.quantity,
+            buyingPriceRwf: products.buyingPriceRwf,
+          })
+          .from(saleItems)
+          .leftJoin(products, eq(saleItems.productId, products.id))
+          .where(inArray(saleItems.saleId, saleIds))
+      : [];
+
+  const estimatedCogsRwf = soldItemRows.reduce((sum, row) => {
+    return sum + Number(row.quantity || 0) * Number(row.buyingPriceRwf || 0);
+  }, 0);
+
+  const totalSalesRwf = sumBy(salesRows, (row) => row.totalAmountRwf);
+  const approvedExpensesRwf = sumBy(
+    approvedExpenseRows,
+    (row) => row.amountRwf,
+  );
+  const grossProfitRwf = totalSalesRwf - estimatedCogsRwf;
+  const netProfitRwf = grossProfitRwf - approvedExpensesRwf;
+  const profitMarginPercent =
+    totalSalesRwf > 0
+      ? Number(((netProfitRwf / totalSalesRwf) * 100).toFixed(1))
+      : 0;
+
   const amountPaidOnSalesRwf = sumBy(salesRows, (row) => row.amountPaidRwf);
 
   const ledgerSalePaymentsRwf = sumBy(
@@ -493,16 +529,21 @@ async function buildDailySummaryReport(input: {
       : null,
 
     summary: {
-      totalSalesRwf: sumBy(salesRows, (row) => row.totalAmountRwf),
+      totalSalesRwf,
       amountPaidOnSalesRwf,
       salesBalanceRwf: sumBy(salesRows, (row) => row.balanceRwf),
       salesCount: salesRows.length,
+
+      estimatedCogsRwf,
+      grossProfitRwf,
+      netProfitRwf,
+      profitMarginPercent,
 
       moneyInRwf,
       moneyOutRwf,
       netMoneyMovementRwf: moneyInRwf - moneyOutRwf,
 
-      approvedExpensesRwf: sumBy(approvedExpenseRows, (row) => row.amountRwf),
+      approvedExpensesRwf,
       approvedExpensesCount: approvedExpenseRows.length,
 
       pendingExpensesRwf: sumBy(pendingExpenseRows, (row) => row.amountRwf),
@@ -1193,6 +1234,24 @@ function buildDailySummaryPdf(report: DailySummaryReport) {
         value: formatRwf(report.summary.totalSalesRwf),
         help: `${report.summary.salesCount} sale(s) recorded`,
         tone: "good",
+      },
+      {
+        label: "Estimated COGS",
+        value: formatRwf(report.summary.estimatedCogsRwf),
+        help: "Estimated cost of sold products",
+        tone: report.summary.estimatedCogsRwf > 0 ? "warning" : "normal",
+      },
+      {
+        label: "Gross profit",
+        value: formatRwf(report.summary.grossProfitRwf),
+        help: "Sales minus estimated product cost",
+        tone: report.summary.grossProfitRwf >= 0 ? "good" : "danger",
+      },
+      {
+        label: "Net profit / loss",
+        value: formatRwf(report.summary.netProfitRwf),
+        help: `${report.summary.profitMarginPercent}% net margin`,
+        tone: report.summary.netProfitRwf >= 0 ? "good" : "danger",
       },
       {
         label: "Money received",
