@@ -6,7 +6,6 @@ import {
   Boxes,
   CheckCircle2,
   Loader2,
-  MoreVertical,
   Package,
   Pencil,
   Plus,
@@ -17,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { AuthUser, getCurrentUser, getToken } from "@/lib/auth";
-import type { FormEvent, MouseEvent, ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   Product,
   ProductCategory,
@@ -35,14 +34,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
 import styles from "./page.module.css";
 
-type ProductModalMode = "create" | "edit" | "price" | null;
-
-type ActionMenuState = {
-  productId: string;
-  x: number;
-  y: number;
-  direction: "down" | "up";
-};
+type ProductModalMode = "create" | "edit" | null;
 
 function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
@@ -55,24 +47,19 @@ function hasPermission(user: AuthUser | null, permission: string) {
   return user.permissions.includes(permission);
 }
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
 export default function ProductsPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
-  const [visibleProductsCount, setVisibleProductsCount] = useState(12);
+  const [visibleProductsCount, setVisibleProductsCount] = useState(5);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [modalMode, setModalMode] = useState<ProductModalMode>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -85,29 +72,16 @@ export default function ProductsPage() {
   const [minSellingPriceRwf, setMinSellingPriceRwf] = useState("0");
   const [lowStockAlert, setLowStockAlert] = useState("1");
   const [warrantyText, setWarrantyText] = useState("");
-  const [priceReason, setPriceReason] = useState("");
+  const [priceReason, setPriceReason] = useState("Owner product update");
 
   const canCreate = hasPermission(user, "products.create");
   const canEdit = hasPermission(user, "products.update");
   const canUpdatePrice = hasPermission(user, "products.updatePrice");
-  const canSeeBuyingPrice = user?.role === "owner" || canUpdatePrice;
+  const isOwner = user?.role === "owner";
+  const canEditPrices = isOwner || canUpdatePrice;
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.isActive),
-    [products],
-  );
-
-  const inactiveProducts = useMemo(
-    () => products.filter((product) => !product.isActive),
-    [products],
-  );
-
-  const totalStockUnits = useMemo(
-    () =>
-      products.reduce(
-        (sum, product) => sum + Number(product.currentStock || 0),
-        0,
-      ),
     [products],
   );
 
@@ -120,56 +94,46 @@ export default function ProductsPage() {
     [products],
   );
 
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return products;
+
+    return products.filter((product) => {
+      return (
+        product.name.toLowerCase().includes(term) ||
+        product.sku.toLowerCase().includes(term) ||
+        (product.brand || "").toLowerCase().includes(term) ||
+        (product.model || "").toLowerCase().includes(term) ||
+        (product.categoryName || "").toLowerCase().includes(term)
+      );
+    });
+  }, [products, search]);
+
+  const priorityProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      const aLow = a.isActive && a.currentStock <= a.lowStockAlert;
+      const bLow = b.isActive && b.currentStock <= b.lowStockAlert;
+
+      if (aLow && !bLow) return -1;
+      if (!aLow && bLow) return 1;
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredProducts]);
+
   const visibleProducts = useMemo(
-    () => products.slice(0, visibleProductsCount),
-    [products, visibleProductsCount],
+    () => priorityProducts.slice(0, visibleProductsCount),
+    [priorityProducts, visibleProductsCount],
   );
 
-  const hasMoreProducts = visibleProductsCount < products.length;
+  const hasMoreProducts = visibleProductsCount < priorityProducts.length;
 
   useEffect(() => {
     loadData("");
   }, []);
-
-  useEffect(() => {
-    function refreshWhenVisible() {
-      if (document.visibilityState === "visible") {
-        loadData(search);
-      }
-    }
-
-    window.addEventListener("focus", refreshWhenVisible);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-
-    return () => {
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-    };
-  }, [search]);
-
-  useEffect(() => {
-    if (!actionMenu) return;
-
-    function closeMenu() {
-      setActionMenu(null);
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") closeMenu();
-    }
-
-    document.addEventListener("click", closeMenu);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-
-    return () => {
-      document.removeEventListener("click", closeMenu);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [actionMenu]);
 
   async function loadData(nextSearch = search) {
     const token = getToken();
@@ -189,7 +153,7 @@ export default function ProductsPage() {
       setUser(meResponse.user);
       setProducts(productsResponse.products);
       setCategories(categoriesResponse.categories);
-      setVisibleProductsCount(12);
+      setVisibleProductsCount(5);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load products.",
@@ -211,13 +175,12 @@ export default function ProductsPage() {
     setMinSellingPriceRwf("0");
     setLowStockAlert("1");
     setWarrantyText("");
-    setPriceReason("");
+    setPriceReason("Owner product update");
   }
 
   function openCreateModal() {
     resetForm();
     setSelectedProduct(null);
-    setActionMenu(null);
     setModalMode("create");
   }
 
@@ -229,20 +192,13 @@ export default function ProductsPage() {
     setBrand(product.brand || "");
     setModel(product.model || "");
     setDescription(product.description || "");
-    setLowStockAlert(String(product.lowStockAlert));
-    setWarrantyText(product.warrantyText || "");
-    setActionMenu(null);
-    setModalMode("edit");
-  }
-
-  function openPriceModal(product: Product) {
-    setSelectedProduct(product);
     setBuyingPriceRwf(String(product.buyingPriceRwf));
     setSellingPriceRwf(String(product.sellingPriceRwf));
     setMinSellingPriceRwf(String(product.minSellingPriceRwf));
-    setPriceReason("Price update");
-    setActionMenu(null);
-    setModalMode("price");
+    setLowStockAlert(String(product.lowStockAlert));
+    setWarrantyText(product.warrantyText || "");
+    setPriceReason("Owner product update");
+    setModalMode("edit");
   }
 
   function closeModal() {
@@ -252,40 +208,9 @@ export default function ProductsPage() {
     resetForm();
   }
 
-  function toggleActionMenu(
-    event: MouseEvent<HTMLButtonElement>,
-    product: Product,
-  ) {
-    event.stopPropagation();
-
-    if (actionMenu?.productId === product.id) {
-      setActionMenu(null);
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 215;
-    const menuHeight = 190;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    const direction: "down" | "up" =
-      spaceBelow < menuHeight && spaceAbove > spaceBelow ? "up" : "down";
-
-    setActionMenu({
-      productId: product.id,
-      direction,
-      x: Math.max(
-        12,
-        Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12),
-      ),
-      y: direction === "down" ? rect.bottom + 8 : rect.top - 8,
-    });
-  }
-
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await loadData(search);
+    setVisibleProductsCount(5);
   }
 
   async function handleCreateProduct(event: FormEvent<HTMLFormElement>) {
@@ -345,41 +270,21 @@ export default function ProductsPage() {
         warrantyText,
       });
 
+      if (canEditPrices) {
+        await updateProductPrices(token, selectedProduct.id, {
+          buyingPriceRwf: Number(buyingPriceRwf || 0),
+          sellingPriceRwf: Number(sellingPriceRwf || 0),
+          minSellingPriceRwf: Number(minSellingPriceRwf || 0),
+          reason: priceReason || "Owner product update",
+        });
+      }
+
       closeModal();
       await loadData(search);
-      setMessage("Product details updated.");
+      setMessage("Product updated successfully.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not update product.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleUpdatePrices(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const token = getToken();
-    if (!token || !selectedProduct) return;
-
-    setSaving(true);
-    setMessage("");
-
-    try {
-      await updateProductPrices(token, selectedProduct.id, {
-        buyingPriceRwf: Number(buyingPriceRwf || 0),
-        sellingPriceRwf: Number(sellingPriceRwf || 0),
-        minSellingPriceRwf: Number(minSellingPriceRwf || 0),
-        reason: priceReason,
-      });
-
-      closeModal();
-      await loadData(search);
-      setMessage("Product prices updated.");
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Could not update prices.",
       );
     } finally {
       setSaving(false);
@@ -390,18 +295,15 @@ export default function ProductsPage() {
     const token = getToken();
     if (!token) return;
 
-    setActionMenu(null);
     setMessage("");
 
     try {
       await deactivateProduct(token, product.id);
       await loadData(search);
-      setMessage("Product deactivated.");
+      setMessage("Product hidden.");
     } catch (error) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not deactivate product.",
+        error instanceof Error ? error.message : "Could not hide product.",
       );
     }
   }
@@ -410,61 +312,38 @@ export default function ProductsPage() {
     const token = getToken();
     if (!token) return;
 
-    setActionMenu(null);
     setMessage("");
 
     try {
       await activateProduct(token, product.id);
       await loadData(search);
-      setMessage("Product activated.");
+      setMessage("Product shown.");
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Could not activate product.",
+        error instanceof Error ? error.message : "Could not show product.",
       );
     }
   }
 
-  const menuProduct = actionMenu
-    ? products.find((product) => product.id === actionMenu.productId)
-    : null;
-
-  const modalTitle =
-    modalMode === "create"
-      ? "Create product"
-      : modalMode === "edit"
-        ? "Edit product"
-        : modalMode === "price"
-          ? "Update prices"
-          : "";
-
-  const modalDescription =
-    modalMode === "create"
-      ? "Create the product profile. Stock quantity will stay 0 until stock is received."
-      : modalMode === "edit"
-        ? "Update product details without changing stock."
-        : modalMode === "price"
-          ? "Update buying, selling, and minimum prices."
-          : "";
-
   return (
     <AppShell title="Products">
       <div className={styles.productsPage}>
-        <section className={`dashboard-hero ${styles.hero}`}>
-          <div className={styles.heroCopy}>
-            <span className="hero-kicker dashboard-kicker">
+        <section className={styles.ownerHero}>
+          <div>
+            <span className={styles.kicker}>
               <Package size={15} />
-              Product profiles
+              Products
             </span>
 
-            <h1>Products</h1>
+            <h1>Product List</h1>
 
             <p>
-              Create and manage product profiles. Product creation does not
-              increase stock. Current stock comes from New Stock Arrivals.
+              Search products, edit details, update prices, and hide products
+              that should not be sold.
             </p>
           </div>
 
-          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
+          <div className={styles.heroActions}>
             <button
               className="btn btn-outline"
               type="button"
@@ -481,90 +360,88 @@ export default function ProductsPage() {
                 onClick={openCreateModal}
               >
                 <Plus size={14} />
-                Create product
+                Add Product
               </button>
             ) : null}
           </div>
         </section>
 
-        <div className={styles.metricsGrid}>
-          <MetricCard
-            icon={<Package size={20} />}
-            label="Products"
-            value={String(products.length)}
-            help="All product profiles in the shop"
-            badge="Total"
-            badgeClass="badge badge-blue"
-          />
+        <section
+          className={
+            lowStockProducts.length > 0
+              ? styles.actionCardWarning
+              : styles.actionCardClean
+          }
+        >
+          <div className={styles.actionIcon}>
+            {lowStockProducts.length > 0 ? (
+              <AlertTriangle size={22} />
+            ) : (
+              <CheckCircle2 size={22} />
+            )}
+          </div>
 
-          <MetricCard
-            icon={<CheckCircle2 size={20} />}
-            label="Active products"
-            value={String(activeProducts.length)}
-            help="Products available for normal selling"
-            badge="Active"
-            badgeClass="badge badge-green"
-          />
+          <div>
+            <strong>
+              {lowStockProducts.length > 0
+                ? "Restock low products first."
+                : "Product records look clean."}
+            </strong>
+            <span>
+              {lowStockProducts.length > 0
+                ? `${lowStockProducts.length} product(s) are at or below alert quantity.`
+                : "No urgent product action needed right now."}
+            </span>
+          </div>
+        </section>
 
-          <MetricCard
-            icon={<Boxes size={20} />}
-            label="Total stock units"
-            value={String(totalStockUnits)}
-            help="Sellable stock from received arrivals"
-            badge="Stock"
-            badgeClass="badge badge-green"
-          />
-
-          <MetricCard
-            icon={<AlertTriangle size={20} />}
-            label="Low stock alerts"
+        <div className={styles.summaryStrip}>
+          <SummaryMini label="Products" value={String(products.length)} />
+          <SummaryMini label="Active" value={String(activeProducts.length)} />
+          <SummaryMini
+            label="Low stock"
             value={String(lowStockProducts.length)}
-            help="Products at or below alert quantity"
-            badge="Low stock"
-            badgeClass="badge badge-orange"
+            danger={lowStockProducts.length > 0}
           />
         </div>
 
         {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-        <section className={`table-card premium-panel ${styles.listPanel}`}>
-          <div className="table-card-header">
+        <section className={styles.listingPanel}>
+          <div className={styles.listingTop}>
             <div>
-              <div className="table-title">Product list</div>
-              <div className="app-subtitle">
-                Search, create, edit, update prices, activate, and deactivate
-                products.
-              </div>
+              <h2>Products</h2>
+              <p>Showing the most important products first.</p>
             </div>
 
-            <div className={styles.listHeaderRight}>
+            {loading ? (
+              <Loader2
+                className="spin"
+                size={20}
+                style={{ color: "var(--orange)" }}
+              />
+            ) : (
               <span className="badge badge-blue">
-                {products.length} record(s)
+                {filteredProducts.length} record(s)
               </span>
-
-              {loading ? (
-                <Loader2
-                  className="spin"
-                  size={20}
-                  style={{ color: "var(--orange)" }}
-                />
-              ) : null}
-            </div>
+            )}
           </div>
 
-          <div className={styles.listToolbar}>
+          <div className={styles.toolbar}>
             <form onSubmit={handleSearch} className={styles.searchForm}>
-              <div className="hdr-search">
-                <Search size={14} />
+              <div className={styles.searchBox}>
+                <Search size={15} />
                 <input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search product name, SKU, brand, model..."
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setVisibleProductsCount(5);
+                  }}
+                  placeholder="Search product, SKU, brand..."
                 />
               </div>
 
               <button className="btn btn-outline" type="submit">
-                <Search size={14} />
                 Search
               </button>
 
@@ -573,7 +450,7 @@ export default function ProductsPage() {
                 type="button"
                 onClick={() => {
                   setSearch("");
-                  loadData("");
+                  setVisibleProductsCount(5);
                 }}
               >
                 Clear
@@ -581,217 +458,108 @@ export default function ProductsPage() {
             </form>
           </div>
 
-          <div className={styles.productGrid}>
+          <div className={styles.productList}>
+            <div className={styles.productHeader}>
+              <span>Product</span>
+              <span>Price</span>
+              <span>Stock</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+
             {visibleProducts.map((product) => {
               const isLowStock =
                 product.isActive &&
                 product.currentStock <= product.lowStockAlert;
 
               return (
-                <article key={product.id} className={styles.productCard}>
-                  <div className={styles.productCardTop}>
-                    <div className={styles.productIdentity}>
-                      <div className={styles.productIcon}>
-                        <Package size={19} />
-                      </div>
-
-                      <div>
-                        <h3>{product.name}</h3>
-                        <p>
-                          {product.brand || "No brand"} ·{" "}
-                          {product.model || "No model"}
-                        </p>
-                        <span>SKU: {product.sku}</span>
-                      </div>
+                <article key={product.id} className={styles.productRow}>
+                  <div className={styles.productMain}>
+                    <div className={styles.avatarIcon}>
+                      <Package size={17} />
                     </div>
 
-                    {canEdit || canUpdatePrice ? (
-                      <button
-                        type="button"
-                        onClick={(event) => toggleActionMenu(event, product)}
-                        className={styles.cardActionButton}
-                        aria-label={`Open actions for ${product.name}`}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    ) : (
-                      <span className={styles.viewOnly}>View only</span>
-                    )}
-                  </div>
-
-                  <div className={styles.badgeRow}>
-                    <span className="badge badge-blue">
-                      {product.categoryName || "Uncategorized"}
-                    </span>
-
-                    <span
-                      className={
-                        product.isActive
-                          ? "badge badge-green"
-                          : "badge badge-orange"
-                      }
-                    >
-                      {product.isActive ? "Active" : "Inactive"}
-                    </span>
-
-                    {product.reviewStatus !== "approved" ? (
-                      <span className="badge badge-orange">
-                        {product.reviewStatus}
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>
+                        {product.sku} · {product.categoryName || "No category"}
                       </span>
-                    ) : null}
+                    </div>
                   </div>
 
-                  <div className={styles.productInfoGrid}>
-                    <MiniInfo
-                      label="Selling price"
+                  <div className={styles.productFacts}>
+                    <Fact
+                      label="Price"
                       value={formatRwf(product.sellingPriceRwf)}
                     />
-
-                    <MiniInfo
-                      label="Current stock"
-                      value={`${product.currentStock} unit(s)`}
-                      tone={isLowStock ? "warning" : "success"}
+                    <Fact
+                      label="Stock"
+                      value={String(product.currentStock)}
+                      danger={isLowStock}
                     />
-
-                    <MiniInfo
-                      label="Alert quantity"
-                      value={String(product.lowStockAlert)}
-                    />
-
-                    <MiniInfo
-                      label="Hidden status"
-                      value={`${inactiveProducts.length} inactive`}
+                    <Fact
+                      label="Status"
+                      value={product.isActive ? "Active" : "Hidden"}
+                      danger={!product.isActive}
                     />
                   </div>
 
-                  {canSeeBuyingPrice ? (
-                    <div className={styles.priceProof}>
-                      <div>
-                        <span>Buying price</span>
-                        <strong>{formatRwf(product.buyingPriceRwf)}</strong>
-                      </div>
+                  <div className={styles.rowActions}>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(product)}
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+                    ) : null}
 
-                      <div>
-                        <span>Minimum selling price</span>
-                        <strong>{formatRwf(product.minSellingPriceRwf)}</strong>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {product.warrantyText || product.description ? (
-                    <div className={styles.productNotes}>
-                      {product.warrantyText ? (
-                        <span>Warranty: {product.warrantyText}</span>
-                      ) : null}
-                      {product.description ? (
-                        <span>{product.description}</span>
-                      ) : null}
-                    </div>
-                  ) : null}
+                    {canEdit ? (
+                      product.isActive ? (
+                        <button
+                          type="button"
+                          className={styles.dangerButton}
+                          onClick={() => handleDeactivate(product)}
+                        >
+                          <PowerOff size={14} />
+                          Hide
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.successButton}
+                          onClick={() => handleActivate(product)}
+                        >
+                          <Power size={14} />
+                          Show
+                        </button>
+                      )
+                    ) : null}
+                  </div>
                 </article>
               );
             })}
 
-            {products.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Package size={22} />
-                <strong>No products found</strong>
-                <span>
-                  Create a product profile first. Stock quantity will be added
-                  later from New Stock Arrivals.
-                </span>
-              </div>
+            {filteredProducts.length === 0 ? (
+              <EmptyCard
+                icon={<Package size={22} />}
+                title="No products found"
+                text="Create a product or search another name, SKU, or brand."
+              />
             ) : null}
           </div>
 
           {hasMoreProducts ? (
-            <div className={styles.loadMoreBox}>
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={() =>
-                  setVisibleProductsCount((current) => current + 12)
-                }
-              >
-                Load more products
-              </button>
-            </div>
+            <button
+              className={styles.loadMoreButton}
+              type="button"
+              onClick={() => setVisibleProductsCount((current) => current + 5)}
+            >
+              Show 5 more products
+            </button>
           ) : null}
         </section>
-
-        {actionMenu && menuProduct ? (
-          <div
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              position: "fixed",
-              left: actionMenu.x,
-              top: actionMenu.y,
-              transform:
-                actionMenu.direction === "up" ? "translateY(-100%)" : "none",
-              width: 215,
-              zIndex: 1000,
-              background: "var(--card)",
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              boxShadow: "var(--sh-lg)",
-              padding: 6,
-            }}
-          >
-            {canEdit ? (
-              <button
-                type="button"
-                onClick={() => openEditModal(menuProduct)}
-                className="staff-menu-item"
-              >
-                <Pencil size={15} />
-                Edit details
-              </button>
-            ) : null}
-
-            {canUpdatePrice ? (
-              <button
-                type="button"
-                onClick={() => openPriceModal(menuProduct)}
-                className="staff-menu-item"
-              >
-                <BadgeDollarSign size={15} />
-                Update prices
-              </button>
-            ) : null}
-
-            {canEdit ? (
-              <>
-                <div
-                  style={{
-                    height: 1,
-                    background: "var(--border)",
-                    margin: "6px 0",
-                  }}
-                />
-
-                {menuProduct.isActive ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDeactivate(menuProduct)}
-                    className="staff-menu-item danger"
-                  >
-                    <PowerOff size={15} />
-                    Deactivate
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleActivate(menuProduct)}
-                    className="staff-menu-item success"
-                  >
-                    <Power size={15} />
-                    Activate
-                  </button>
-                )}
-              </>
-            ) : null}
-          </div>
-        ) : null}
 
         {modalMode ? (
           <div className="staff-modal-backdrop">
@@ -799,17 +567,23 @@ export default function ProductsPage() {
               <div className="staff-modal-header">
                 <div>
                   <div className="staff-modal-icon">
-                    {modalMode === "price" ? (
-                      <BadgeDollarSign size={22} />
-                    ) : modalMode === "edit" ? (
+                    {modalMode === "edit" ? (
                       <Pencil size={22} />
                     ) : (
                       <Package size={22} />
                     )}
                   </div>
 
-                  <h2>{modalTitle}</h2>
-                  <p>{modalDescription}</p>
+                  <h2>
+                    {modalMode === "create"
+                      ? "Add new product"
+                      : "Edit product"}
+                  </h2>
+                  <p>
+                    {modalMode === "create"
+                      ? "Create the product profile. Stock is added from Stock Control."
+                      : "Update product details and prices."}
+                  </p>
                 </div>
 
                 <button
@@ -821,145 +595,52 @@ export default function ProductsPage() {
                 </button>
               </div>
 
-              {modalMode === "create" ? (
-                <form
-                  onSubmit={handleCreateProduct}
-                  className="staff-modal-body"
-                >
-                  <ProductForm
-                    name={name}
-                    sku={sku}
-                    categoryName={categoryName}
-                    brand={brand}
-                    model={model}
-                    description={description}
-                    buyingPriceRwf={buyingPriceRwf}
-                    sellingPriceRwf={sellingPriceRwf}
-                    minSellingPriceRwf={minSellingPriceRwf}
-                    lowStockAlert={lowStockAlert}
-                    warrantyText={warrantyText}
-                    categories={categories}
-                    setName={setName}
-                    setSku={setSku}
-                    setCategoryName={setCategoryName}
-                    setBrand={setBrand}
-                    setModel={setModel}
-                    setDescription={setDescription}
-                    setBuyingPriceRwf={setBuyingPriceRwf}
-                    setSellingPriceRwf={setSellingPriceRwf}
-                    setMinSellingPriceRwf={setMinSellingPriceRwf}
-                    setLowStockAlert={setLowStockAlert}
-                    setWarrantyText={setWarrantyText}
-                    includeSku
-                    includePrices
-                  />
+              <form
+                onSubmit={
+                  modalMode === "create"
+                    ? handleCreateProduct
+                    : handleUpdateProduct
+                }
+                className="staff-modal-body"
+              >
+                <ProductForm
+                  mode={modalMode}
+                  name={name}
+                  sku={sku}
+                  categoryName={categoryName}
+                  brand={brand}
+                  model={model}
+                  description={description}
+                  buyingPriceRwf={buyingPriceRwf}
+                  sellingPriceRwf={sellingPriceRwf}
+                  minSellingPriceRwf={minSellingPriceRwf}
+                  lowStockAlert={lowStockAlert}
+                  warrantyText={warrantyText}
+                  priceReason={priceReason}
+                  categories={categories}
+                  canEditPrices={modalMode === "create" || canEditPrices}
+                  setName={setName}
+                  setSku={setSku}
+                  setCategoryName={setCategoryName}
+                  setBrand={setBrand}
+                  setModel={setModel}
+                  setDescription={setDescription}
+                  setBuyingPriceRwf={setBuyingPriceRwf}
+                  setSellingPriceRwf={setSellingPriceRwf}
+                  setMinSellingPriceRwf={setMinSellingPriceRwf}
+                  setLowStockAlert={setLowStockAlert}
+                  setWarrantyText={setWarrantyText}
+                  setPriceReason={setPriceReason}
+                />
 
-                  <ModalFooter
-                    onCancel={closeModal}
-                    saving={saving}
-                    label="Create product"
-                  />
-                </form>
-              ) : null}
-
-              {modalMode === "edit" ? (
-                <form
-                  onSubmit={handleUpdateProduct}
-                  className="staff-modal-body"
-                >
-                  <ProductForm
-                    name={name}
-                    sku={sku}
-                    categoryName={categoryName}
-                    brand={brand}
-                    model={model}
-                    description={description}
-                    buyingPriceRwf={buyingPriceRwf}
-                    sellingPriceRwf={sellingPriceRwf}
-                    minSellingPriceRwf={minSellingPriceRwf}
-                    lowStockAlert={lowStockAlert}
-                    warrantyText={warrantyText}
-                    categories={categories}
-                    setName={setName}
-                    setSku={setSku}
-                    setCategoryName={setCategoryName}
-                    setBrand={setBrand}
-                    setModel={setModel}
-                    setDescription={setDescription}
-                    setBuyingPriceRwf={setBuyingPriceRwf}
-                    setSellingPriceRwf={setSellingPriceRwf}
-                    setMinSellingPriceRwf={setMinSellingPriceRwf}
-                    setLowStockAlert={setLowStockAlert}
-                    setWarrantyText={setWarrantyText}
-                  />
-
-                  <ModalFooter
-                    onCancel={closeModal}
-                    saving={saving}
-                    label="Save changes"
-                  />
-                </form>
-              ) : null}
-
-              {modalMode === "price" ? (
-                <form
-                  onSubmit={handleUpdatePrices}
-                  className="staff-modal-body"
-                >
-                  <div className="staff-form-grid">
-                    <label className="staff-form-group">
-                      <span>Buying price</span>
-                      <input
-                        type="number"
-                        value={buyingPriceRwf}
-                        onChange={(event) =>
-                          setBuyingPriceRwf(event.target.value)
-                        }
-                        min={0}
-                      />
-                    </label>
-
-                    <label className="staff-form-group">
-                      <span>Selling price</span>
-                      <input
-                        type="number"
-                        value={sellingPriceRwf}
-                        onChange={(event) =>
-                          setSellingPriceRwf(event.target.value)
-                        }
-                        min={0}
-                      />
-                    </label>
-
-                    <label className="staff-form-group">
-                      <span>Minimum selling price</span>
-                      <input
-                        type="number"
-                        value={minSellingPriceRwf}
-                        onChange={(event) =>
-                          setMinSellingPriceRwf(event.target.value)
-                        }
-                        min={0}
-                      />
-                    </label>
-
-                    <label className="staff-form-group">
-                      <span>Reason</span>
-                      <input
-                        value={priceReason}
-                        onChange={(event) => setPriceReason(event.target.value)}
-                        placeholder="Example: Market price update"
-                      />
-                    </label>
-                  </div>
-
-                  <ModalFooter
-                    onCancel={closeModal}
-                    saving={saving}
-                    label="Update prices"
-                  />
-                </form>
-              ) : null}
+                <ModalFooter
+                  onCancel={closeModal}
+                  saving={saving}
+                  label={
+                    modalMode === "create" ? "Create product" : "Save product"
+                  }
+                />
+              </form>
             </div>
           </div>
         ) : null}
@@ -968,59 +649,42 @@ export default function ProductsPage() {
   );
 }
 
-type MetricCardProps = {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  help: string;
-  badge: string;
-  badgeClass: string;
-};
-
-function MetricCard({
-  icon,
+function SummaryMini({
   label,
   value,
-  help,
-  badge,
-  badgeClass,
-}: MetricCardProps) {
+  danger = false,
+}: {
+  label: string;
+  value: string;
+  danger?: boolean;
+}) {
   return (
-    <div className={styles.metricCard}>
-      <div className={styles.metricTop}>
-        <div className="feature-icon">{icon}</div>
-        <span className={badgeClass}>{badge}</span>
-      </div>
-
-      <div className="stat-label">{label}</div>
-      <div className={styles.metricValue}>{value}</div>
-      <div className="stat-help">{help}</div>
+    <div className={styles.summaryMini}>
+      <span>{label}</span>
+      <strong className={danger ? styles.warningValue : ""}>{value}</strong>
     </div>
   );
 }
 
-type MiniInfoProps = {
+function Fact({
+  label,
+  value,
+  danger = false,
+}: {
   label: string;
   value: string;
-  tone?: "default" | "success" | "warning";
-};
-
-function MiniInfo({ label, value, tone = "default" }: MiniInfoProps) {
+  danger?: boolean;
+}) {
   return (
-    <div
-      className={cx(
-        styles.miniInfo,
-        tone === "success" && styles.miniInfoSuccess,
-        tone === "warning" && styles.miniInfoWarning,
-      )}
-    >
+    <div className={styles.fact}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className={danger ? styles.warningValue : ""}>{value}</strong>
     </div>
   );
 }
 
 type ProductFormProps = {
+  mode: "create" | "edit";
   name: string;
   sku: string;
   categoryName: string;
@@ -1032,7 +696,9 @@ type ProductFormProps = {
   minSellingPriceRwf: string;
   lowStockAlert: string;
   warrantyText: string;
+  priceReason: string;
   categories: ProductCategory[];
+  canEditPrices: boolean;
   setName: (value: string) => void;
   setSku: (value: string) => void;
   setCategoryName: (value: string) => void;
@@ -1044,11 +710,11 @@ type ProductFormProps = {
   setMinSellingPriceRwf: (value: string) => void;
   setLowStockAlert: (value: string) => void;
   setWarrantyText: (value: string) => void;
-  includeSku?: boolean;
-  includePrices?: boolean;
+  setPriceReason: (value: string) => void;
 };
 
 function ProductForm({
+  mode,
   name,
   sku,
   categoryName,
@@ -1060,7 +726,9 @@ function ProductForm({
   minSellingPriceRwf,
   lowStockAlert,
   warrantyText,
+  priceReason,
   categories,
+  canEditPrices,
   setName,
   setSku,
   setCategoryName,
@@ -1072,73 +740,88 @@ function ProductForm({
   setMinSellingPriceRwf,
   setLowStockAlert,
   setWarrantyText,
-  includeSku = false,
-  includePrices = false,
+  setPriceReason,
 }: ProductFormProps) {
   return (
     <>
-      <div className="staff-form-grid">
-        <label className="staff-form-group">
-          <span>Product name</span>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Example: Oraimo 20W Type-C Fast Charger"
-            required
-          />
-        </label>
+      <section className={styles.formSection}>
+        <div className="staff-form-section-title">Product details</div>
 
-        <label className="staff-form-group">
-          <span>Category</span>
-          <input
-            value={categoryName}
-            onChange={(event) => setCategoryName(event.target.value)}
-            list="product-categories"
-            placeholder="Example: Chargers"
-          />
-          <datalist id="product-categories">
-            {categories.map((category) => (
-              <option key={category.id} value={category.name} />
-            ))}
-          </datalist>
-        </label>
-
-        <label className="staff-form-group">
-          <span>Brand</span>
-          <input
-            value={brand}
-            onChange={(event) => setBrand(event.target.value)}
-            placeholder="Example: Oraimo"
-          />
-        </label>
-
-        <label className="staff-form-group">
-          <span>Model</span>
-          <input
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            placeholder="Example: OCW-20W"
-          />
-        </label>
-
-        {includeSku ? (
+        <div className="staff-form-grid">
           <label className="staff-form-group">
-            <span>SKU optional</span>
+            <span>Product name</span>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Example: Oraimo 20W Type-C Fast Charger"
+              required
+            />
+          </label>
+
+          <label className="staff-form-group">
+            <span>SKU</span>
             <input
               value={sku}
               onChange={(event) => setSku(event.target.value)}
-              placeholder="Leave empty to auto-generate"
+              placeholder={
+                mode === "create"
+                  ? "Leave empty to auto-generate"
+                  : "SKU shown for reference"
+              }
+              readOnly={mode === "edit"}
             />
           </label>
-        ) : null}
+
+          <label className="staff-form-group">
+            <span>Category</span>
+            <input
+              value={categoryName}
+              onChange={(event) => setCategoryName(event.target.value)}
+              list="product-categories"
+              placeholder="Example: Chargers"
+            />
+            <datalist id="product-categories">
+              {categories.map((category) => (
+                <option key={category.id} value={category.name} />
+              ))}
+            </datalist>
+          </label>
+
+          <label className="staff-form-group">
+            <span>Brand</span>
+            <input
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              placeholder="Example: Oraimo"
+            />
+          </label>
+
+          <label className="staff-form-group">
+            <span>Model</span>
+            <input
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              placeholder="Example: OCW-20W"
+            />
+          </label>
+
+          <label className="staff-form-group">
+            <span>Low stock alert</span>
+            <input
+              type="number"
+              value={lowStockAlert}
+              onChange={(event) => setLowStockAlert(event.target.value)}
+              min={0}
+            />
+          </label>
+        </div>
 
         <label className="staff-form-group">
-          <span>Low stock alert</span>
-          <input
-            type="number"
-            value={lowStockAlert}
-            onChange={(event) => setLowStockAlert(event.target.value)}
-            min={0}
+          <span>Description</span>
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Short product description"
           />
         </label>
 
@@ -1150,49 +833,55 @@ function ProductForm({
             placeholder="Example: 1 month warranty"
           />
         </label>
-      </div>
+      </section>
 
-      <label className="staff-form-group">
-        <span>Description</span>
-        <input
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          placeholder="Short product description"
-        />
-      </label>
+      {canEditPrices ? (
+        <section className={styles.formSection}>
+          <div className="staff-form-section-title">Prices</div>
 
-      {includePrices ? (
-        <div className="staff-form-grid">
-          <label className="staff-form-group">
-            <span>Buying price</span>
-            <input
-              type="number"
-              value={buyingPriceRwf}
-              onChange={(event) => setBuyingPriceRwf(event.target.value)}
-              min={0}
-            />
-          </label>
+          <div className="staff-form-grid">
+            <label className="staff-form-group">
+              <span>Buying price</span>
+              <input
+                type="number"
+                value={buyingPriceRwf}
+                onChange={(event) => setBuyingPriceRwf(event.target.value)}
+                min={0}
+              />
+            </label>
 
-          <label className="staff-form-group">
-            <span>Selling price</span>
-            <input
-              type="number"
-              value={sellingPriceRwf}
-              onChange={(event) => setSellingPriceRwf(event.target.value)}
-              min={0}
-            />
-          </label>
+            <label className="staff-form-group">
+              <span>Selling price</span>
+              <input
+                type="number"
+                value={sellingPriceRwf}
+                onChange={(event) => setSellingPriceRwf(event.target.value)}
+                min={0}
+              />
+            </label>
 
-          <label className="staff-form-group">
-            <span>Minimum selling price</span>
-            <input
-              type="number"
-              value={minSellingPriceRwf}
-              onChange={(event) => setMinSellingPriceRwf(event.target.value)}
-              min={0}
-            />
-          </label>
-        </div>
+            <label className="staff-form-group">
+              <span>Minimum selling price</span>
+              <input
+                type="number"
+                value={minSellingPriceRwf}
+                onChange={(event) => setMinSellingPriceRwf(event.target.value)}
+                min={0}
+              />
+            </label>
+
+            {mode === "edit" ? (
+              <label className="staff-form-group">
+                <span>Reason</span>
+                <input
+                  value={priceReason}
+                  onChange={(event) => setPriceReason(event.target.value)}
+                  placeholder="Example: Market price update"
+                />
+              </label>
+            ) : null}
+          </div>
+        </section>
       ) : null}
     </>
   );
@@ -1219,6 +908,22 @@ function ModalFooter({ onCancel, saving, label }: ModalFooterProps) {
         <Plus size={15} />
         {label}
       </AsyncButton>
+    </div>
+  );
+}
+
+type EmptyCardProps = {
+  icon: ReactNode;
+  title: string;
+  text: string;
+};
+
+function EmptyCard({ icon, title, text }: EmptyCardProps) {
+  return (
+    <div className={styles.emptyCard}>
+      <div>{icon}</div>
+      <strong>{title}</strong>
+      <span>{text}</span>
     </div>
   );
 }

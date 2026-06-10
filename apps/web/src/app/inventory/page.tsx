@@ -61,6 +61,14 @@ function formatDate(value: string) {
   });
 }
 
+function formatShortDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
 function hasPermission(user: AuthUser | null, permission: string) {
   if (!user) return false;
   if (user.role === "owner") return true;
@@ -126,15 +134,6 @@ export default function InventoryPage() {
     [products],
   );
 
-  const totalArrivalsQuantity = useMemo(
-    () =>
-      arrivals.reduce(
-        (sum, arrival) => sum + Number(arrival.totalQuantityReceived || 0),
-        0,
-      ),
-    [arrivals],
-  );
-
   const totalDamagedOnArrival = useMemo(
     () =>
       arrivals.reduce(
@@ -159,18 +158,11 @@ export default function InventoryPage() {
     if (!term) return arrivals;
 
     return arrivals.filter((arrival) => {
-      const shipmentReferenceValue = (
-        arrival.shipmentReference || ""
-      ).toLowerCase();
-      const referenceCode = (arrival.referenceCode || "").toLowerCase();
-      const source = (arrival.sourceName || "").toLowerCase();
-      const receivedBy = (arrival.receivedByName || "").toLowerCase();
-
       return (
-        shipmentReferenceValue.includes(term) ||
-        referenceCode.includes(term) ||
-        source.includes(term) ||
-        receivedBy.includes(term)
+        (arrival.shipmentReference || "").toLowerCase().includes(term) ||
+        (arrival.referenceCode || "").toLowerCase().includes(term) ||
+        (arrival.sourceName || "").toLowerCase().includes(term) ||
+        (arrival.receivedByName || "").toLowerCase().includes(term)
       );
     });
   }, [arrivals, listSearch]);
@@ -181,16 +173,11 @@ export default function InventoryPage() {
     if (!term) return movements;
 
     return movements.filter((movement) => {
-      const productName = (movement.productName || "").toLowerCase();
-      const reason = (movement.reason || "").toLowerCase();
-      const movementType = (movement.movementType || "").toLowerCase();
-      const actorName = (movement.actorName || "").toLowerCase();
-
       return (
-        productName.includes(term) ||
-        reason.includes(term) ||
-        movementType.includes(term) ||
-        actorName.includes(term)
+        (movement.productName || "").toLowerCase().includes(term) ||
+        (movement.reason || "").toLowerCase().includes(term) ||
+        (movement.movementType || "").toLowerCase().includes(term) ||
+        (movement.actorName || "").toLowerCase().includes(term)
       );
     });
   }, [listSearch, movements]);
@@ -204,9 +191,6 @@ export default function InventoryPage() {
     () => filteredMovements.slice(0, visibleMovementsCount),
     [filteredMovements, visibleMovementsCount],
   );
-
-  const hasMoreArrivals = visibleArrivalsCount < filteredArrivals.length;
-  const hasMoreMovements = visibleMovementsCount < filteredMovements.length;
 
   const arrivalFormTotals = useMemo(() => {
     return items.reduce(
@@ -356,7 +340,7 @@ export default function InventoryPage() {
 
     if (hasInvalidItem) {
       setMessage(
-        "Please check arrival items. Damaged quantity cannot be higher than received quantity.",
+        "Please check received products. Damaged quantity cannot be higher than received quantity.",
       );
       return;
     }
@@ -418,25 +402,28 @@ export default function InventoryPage() {
     }
   }
 
+  const latestArrival = arrivals[0];
+  const latestMovement = movements[0];
+
   return (
     <AppShell title="Stock">
       <div className={styles.inventoryPage}>
-        <section className={`dashboard-hero ${styles.hero}`}>
-          <div className={styles.heroCopy}>
-            <span className="hero-kicker dashboard-kicker">
+        <section className={styles.ownerHero}>
+          <div>
+            <span className={styles.kicker}>
               <Truck size={15} />
-              New stock arrivals
+              Inventory
             </span>
 
-            <h1>Inventory</h1>
+            <h1>Stock Control</h1>
 
             <p>
-              Record stock received in Kigali, track damaged items on arrival,
-              and keep a clear history of every stock movement.
+              Receive stock, check damaged items, and see the latest stock
+              changes without confusion.
             </p>
           </div>
 
-          <div className={`dashboard-hero-actions ${styles.heroActions}`}>
+          <div className={styles.heroActions}>
             <button
               className="btn btn-outline"
               type="button"
@@ -459,54 +446,84 @@ export default function InventoryPage() {
           </div>
         </section>
 
+        <section className={styles.actionCard}>
+          <div className={styles.actionIcon}>
+            {totalDamagedOnArrival > 0 ? (
+              <AlertTriangle size={22} />
+            ) : (
+              <CheckCircle2 size={22} />
+            )}
+          </div>
+
+          <div>
+            <strong>
+              {totalDamagedOnArrival > 0
+                ? "Check damaged stock before selling."
+                : "Stock records look clean."}
+            </strong>
+            <span>
+              {latestArrival
+                ? `Latest arrival: ${
+                    latestArrival.shipmentReference ||
+                    latestArrival.referenceCode
+                  } from ${latestArrival.sourceName || "unknown source"}.`
+                : "No stock arrival has been recorded yet."}
+            </span>
+          </div>
+        </section>
+
         <div className={styles.metricsGrid}>
           <MetricCard
             icon={<Boxes size={20} />}
-            label="Total stock units"
+            label="Stock available"
             value={String(totalStockQuantity)}
-            help="Sellable stock currently in the system"
-            badge="Stock"
+            help="Sellable units currently in the shop"
+            badge="Now"
             badgeClass="badge badge-blue"
           />
 
           <MetricCard
             icon={<Truck size={20} />}
-            label="Received units"
-            value={String(totalArrivalsQuantity)}
-            help="All units recorded through arrivals"
-            badge="Received"
+            label="Arrivals"
+            value={String(arrivals.length)}
+            help="Stock batches received"
+            badge="Batches"
             badgeClass="badge badge-green"
           />
 
           <MetricCard
             icon={<AlertTriangle size={20} />}
-            label="Damaged on arrival"
+            label="Damaged"
             value={String(totalDamagedOnArrival)}
-            help="Items received but not added to sellable stock"
-            badge="Damaged"
-            badgeClass="badge badge-orange"
+            help="Items received damaged"
+            badge="Check"
+            badgeClass={
+              totalDamagedOnArrival > 0
+                ? "badge badge-orange"
+                : "badge badge-green"
+            }
           />
 
           <MetricCard
             icon={<CheckCircle2 size={20} />}
-            label="Arrival cost"
+            label="Stock value"
             value={formatRwf(totalArrivalCost)}
-            help="Based on received quantity × unit cost"
-            badge="Cost"
+            help="Recorded value of received stock"
+            badge="Value"
             badgeClass="badge badge-blue"
           />
         </div>
 
         {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-        <section className={`table-card premium-panel ${styles.controlPanel}`}>
-          <div className="table-card-header">
+        <section className={styles.listingPanel}>
+          <div className={styles.listingTop}>
             <div>
-              <div className="table-title">Inventory control</div>
-              <div className="app-subtitle">
-                Search stock arrivals and stock movements without horizontal
-                scrolling.
-              </div>
+              <h2>Stock arrivals</h2>
+              <p>
+                Only the important proof: shipment, source, quantity, damage,
+                cost, and action.
+              </p>
             </div>
 
             {loading ? (
@@ -519,8 +536,8 @@ export default function InventoryPage() {
           </div>
 
           <div className={styles.toolbar}>
-            <div className="hdr-search">
-              <Search size={14} />
+            <div className={styles.searchBox}>
+              <Search size={15} />
               <input
                 value={listSearch}
                 onChange={(event) => {
@@ -528,7 +545,7 @@ export default function InventoryPage() {
                   setVisibleArrivalsCount(8);
                   setVisibleMovementsCount(8);
                 }}
-                placeholder="Search shipment, product, source, user..."
+                placeholder="Search shipment, source, user..."
               />
             </div>
 
@@ -544,172 +561,178 @@ export default function InventoryPage() {
               Clear
             </button>
           </div>
-        </section>
 
-        <div className={styles.mainGrid}>
-          <section className={`table-card premium-panel ${styles.listPanel}`}>
-            <div className="table-card-header">
-              <div>
-                <div className="table-title">Stock arrivals</div>
-                <div className="app-subtitle">
-                  Every shipment or received stock batch is recorded here.
-                </div>
-              </div>
-
-              <span className="badge badge-blue">
-                {filteredArrivals.length} record(s)
-              </span>
+          <div className={styles.responsiveList}>
+            <div className={styles.listHeader}>
+              <span>Shipment</span>
+              <span>Qty</span>
+              <span>Damage</span>
+              <span>Cost</span>
+              <span>Action</span>
             </div>
 
-            <div className={styles.arrivalList}>
-              {visibleArrivals.map((arrival) => (
-                <article key={arrival.id} className={styles.arrivalCard}>
-                  <div className={styles.arrivalTop}>
-                    <div className={styles.arrivalIdentity}>
-                      <div className={styles.cardIcon}>
-                        <Truck size={18} />
-                      </div>
+            {visibleArrivals.map((arrival) => {
+              const damaged = Number(arrival.totalDamagedQuantity || 0);
 
-                      <div>
-                        <h3>
-                          {arrival.shipmentReference || arrival.referenceCode}
-                        </h3>
-                        <p>
-                          {arrival.sourceName || "Unknown source"} ·{" "}
-                          {formatDate(arrival.receivedAt)}
-                        </p>
-                        <span>
-                          System ref: {arrival.referenceCode} · Received by{" "}
-                          {arrival.receivedByName || "Unknown user"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      className="btn btn-outline btn-sm"
-                      type="button"
-                      onClick={() => openArrivalDetails(arrival)}
-                    >
-                      <Eye size={13} />
-                      View
-                    </button>
-                  </div>
-
-                  <div className={styles.miniGrid}>
-                    <MiniInfo
-                      label="Products"
-                      value={`${arrival.itemCount} product(s)`}
-                    />
-
-                    <MiniInfo
-                      label="Received"
-                      value={`${arrival.totalQuantityReceived} unit(s)`}
-                      tone="success"
-                    />
-
-                    <MiniInfo
-                      label="Damaged"
-                      value={`${arrival.totalDamagedQuantity} damaged`}
-                      tone={
-                        arrival.totalDamagedQuantity > 0 ? "warning" : "success"
-                      }
-                    />
-
-                    <MiniInfo
-                      label="Cost"
-                      value={formatRwf(arrival.totalCostRwf)}
-                    />
-                  </div>
-                </article>
-              ))}
-
-              {filteredArrivals.length === 0 ? (
-                <EmptyCard
-                  icon={<Truck size={19} />}
-                  title="No stock arrivals found"
-                  text="Receive stock first or try another search term."
-                />
-              ) : null}
-            </div>
-
-            {hasMoreArrivals ? (
-              <div className={styles.loadMoreBox}>
-                <button
-                  className="btn btn-outline"
-                  type="button"
-                  onClick={() =>
-                    setVisibleArrivalsCount((current) => current + 8)
-                  }
-                >
-                  Load more arrivals
-                </button>
-              </div>
-            ) : null}
-          </section>
-
-          <section className={`table-card premium-panel ${styles.listPanel}`}>
-            <div className="table-card-header">
-              <div>
-                <div className="table-title">Recent stock movements</div>
-                <div className="app-subtitle">
-                  Proof of how stock changed, who did it, and why.
-                </div>
-              </div>
-
-              <span className="badge badge-blue">
-                {filteredMovements.length} record(s)
-              </span>
-            </div>
-
-            <div className={styles.movementList}>
-              {visibleMovements.map((movement) => (
-                <article key={movement.id} className={styles.movementCard}>
-                  <div className={styles.movementTop}>
-                    <div className={styles.cardIcon}>
-                      <Package size={17} />
+              return (
+                <article key={arrival.id} className={styles.listRow}>
+                  <div className={styles.primaryCell}>
+                    <div className={styles.avatarIcon}>
+                      <Truck size={17} />
                     </div>
 
                     <div>
-                      <h3>{movement.productName}</h3>
-                      <p>
-                        {movement.quantityChange > 0 ? "+" : ""}
-                        {movement.quantityChange} stock ·{" "}
-                        {movement.quantityBefore} → {movement.quantityAfter}
-                      </p>
+                      <strong>
+                        {arrival.shipmentReference || arrival.referenceCode}
+                      </strong>
                       <span>
-                        {movement.reason || movement.movementType} ·{" "}
-                        {movement.actorName || "Unknown user"} ·{" "}
-                        {formatDate(movement.createdAt)}
+                        {arrival.sourceName || "Unknown source"} ·{" "}
+                        {formatShortDate(arrival.receivedAt)}
                       </span>
                     </div>
                   </div>
-                </article>
-              ))}
 
-              {filteredMovements.length === 0 ? (
-                <EmptyCard
-                  icon={<Search size={19} />}
-                  title="No stock movement found"
-                  text="Receive stock first or try another search term."
-                />
-              ) : null}
+                  <div className={styles.dataCell}>
+                    <span>Qty</span>
+                    <strong>{arrival.totalQuantityReceived}</strong>
+                  </div>
+
+                  <div className={styles.dataCell}>
+                    <span>Damage</span>
+                    <strong>{damaged}</strong>
+                  </div>
+
+                  <div className={styles.dataCell}>
+                    <span>Cost</span>
+                    <strong>{formatRwf(arrival.totalCostRwf)}</strong>
+                  </div>
+
+                  <div className={styles.actionCell}>
+                    <button
+                      type="button"
+                      onClick={() => openArrivalDetails(arrival)}
+                    >
+                      <Eye size={14} />
+                      View
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+
+            {filteredArrivals.length === 0 ? (
+              <EmptyCard
+                icon={<Truck size={22} />}
+                title="No stock arrivals found"
+                text="Receive stock first or search another shipment/source."
+              />
+            ) : null}
+          </div>
+
+          {filteredArrivals.length > visibleArrivalsCount ? (
+            <button
+              className={styles.loadMoreButton}
+              type="button"
+              onClick={() => setVisibleArrivalsCount((current) => current + 8)}
+            >
+              Load more arrivals
+            </button>
+          ) : null}
+        </section>
+
+        <section className={styles.listingPanel}>
+          <div className={styles.listingTop}>
+            <div>
+              <h2>Latest stock changes</h2>
+              <p>
+                Simple audit trail: product, stock change, reason, and user.
+              </p>
             </div>
 
-            {hasMoreMovements ? (
-              <div className={styles.loadMoreBox}>
-                <button
-                  className="btn btn-outline"
-                  type="button"
-                  onClick={() =>
-                    setVisibleMovementsCount((current) => current + 8)
-                  }
-                >
-                  Load more movements
-                </button>
-              </div>
+            <span className="badge badge-blue">
+              {filteredMovements.length} record(s)
+            </span>
+          </div>
+
+          <div className={styles.responsiveList}>
+            <div className={styles.movementHeader}>
+              <span>Product</span>
+              <span>Change</span>
+              <span>Before → After</span>
+              <span>Reason</span>
+            </div>
+
+            {visibleMovements.map((movement) => (
+              <article key={movement.id} className={styles.movementRow}>
+                <div className={styles.primaryCell}>
+                  <div className={styles.avatarIcon}>
+                    <Package size={17} />
+                  </div>
+
+                  <div>
+                    <strong>{movement.productName}</strong>
+                    <span>
+                      {movement.actorName || "Unknown user"} ·{" "}
+                      {formatShortDate(movement.createdAt)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.dataCell}>
+                  <span>Change</span>
+                  <strong
+                    className={
+                      movement.quantityChange >= 0
+                        ? styles.positiveValue
+                        : styles.negativeValue
+                    }
+                  >
+                    {movement.quantityChange > 0 ? "+" : ""}
+                    {movement.quantityChange}
+                  </strong>
+                </div>
+
+                <div className={styles.dataCell}>
+                  <span>Before → After</span>
+                  <strong>
+                    {movement.quantityBefore} → {movement.quantityAfter}
+                  </strong>
+                </div>
+
+                <div className={styles.reasonCell}>
+                  <span>Reason</span>
+                  <strong>{movement.reason || movement.movementType}</strong>
+                </div>
+              </article>
+            ))}
+
+            {filteredMovements.length === 0 ? (
+              <EmptyCard
+                icon={<Search size={22} />}
+                title="No stock movement found"
+                text="Stock changes will appear here after receiving or adjusting stock."
+              />
             ) : null}
-          </section>
-        </div>
+          </div>
+
+          {filteredMovements.length > visibleMovementsCount ? (
+            <button
+              className={styles.loadMoreButton}
+              type="button"
+              onClick={() => setVisibleMovementsCount((current) => current + 8)}
+            >
+              Load more movements
+            </button>
+          ) : null}
+
+          {latestMovement ? (
+            <div className={styles.mobileHint}>
+              Latest: {latestMovement.productName} changed by{" "}
+              {latestMovement.quantityChange > 0 ? "+" : ""}
+              {latestMovement.quantityChange}.
+            </div>
+          ) : null}
+        </section>
 
         {arrivalModalOpen ? (
           <div className="staff-modal-backdrop">
@@ -722,8 +745,8 @@ export default function InventoryPage() {
 
                   <h2>Receive new stock</h2>
                   <p>
-                    Add products received in Kigali. Only sellable quantity
-                    increases stock.
+                    Add products received. Damaged items are recorded
+                    separately.
                   </p>
                 </div>
 
@@ -762,7 +785,7 @@ export default function InventoryPage() {
                   <textarea
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Example: Items received from Dubai by trusted employee."
+                    placeholder="Example: Items received by trusted employee."
                   />
                 </label>
 
@@ -772,7 +795,7 @@ export default function InventoryPage() {
                       <div className="staff-form-section-title">
                         Arrival summary
                       </div>
-                      <p>Check received, damaged, sellable, and total cost.</p>
+                      <p>Confirm received, sellable, damaged, and cost.</p>
                     </div>
 
                     <span className="badge badge-blue">
@@ -985,7 +1008,7 @@ export default function InventoryPage() {
 
                   <AsyncButton loading={saving} type="submit">
                     <Plus size={15} />
-                    Save stock arrival
+                    Save stock
                   </AsyncButton>
                 </div>
               </form>
@@ -1064,15 +1087,15 @@ export default function InventoryPage() {
                           className={styles.detailItemCard}
                         >
                           <div className={styles.detailItemTop}>
-                            <div className={styles.cardIcon}>
+                            <div className={styles.avatarIcon}>
                               <Package size={17} />
                             </div>
 
                             <div>
                               <h3>{item.productName}</h3>
                               <p>
-                                {item.brand || "No brand"} ·{" "}
-                                {item.model || "No model"} · {item.sku}
+                                {item.sku} · {item.brand || "No brand"} ·{" "}
+                                {item.model || "No model"}
                               </p>
                             </div>
                           </div>
@@ -1104,7 +1127,7 @@ export default function InventoryPage() {
 
                       {detailsData.items.length === 0 ? (
                         <EmptyCard
-                          icon={<Package size={19} />}
+                          icon={<Package size={22} />}
                           title="No items found"
                           text="No product item was returned for this stock arrival."
                         />
