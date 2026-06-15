@@ -29,12 +29,20 @@ type CustomerDebtRecord = typeof customerDebts.$inferSelect;
 type CustomerDebtInstallmentRecord =
   typeof customerDebtInstallments.$inferSelect;
 
+type PriceAction = "normal" | "discount" | "extra_charge" | "below_minimum";
+
 type ProductLine = {
   product: ProductRecord;
   quantity: number;
   unitPriceRwf: number;
+  normalUnitPriceRwf: number;
+  minSellingPriceRwf: number;
   lineTotalRwf: number;
+  normalLineTotalRwf: number;
   soldBelowMinimum: boolean;
+  priceAction: PriceAction;
+  discountRwf: number;
+  extraChargeRwf: number;
 };
 
 const installmentFrequencySchema = z.enum(["daily", "weekly", "monthly"]);
@@ -222,6 +230,53 @@ function buildInstallmentSchedule(input: {
   });
 }
 
+function getPriceAction(input: {
+  unitPriceRwf: number;
+  sellingPriceRwf: number;
+  minSellingPriceRwf: number;
+}): {
+  priceAction: PriceAction;
+  soldBelowMinimum: boolean;
+  discountRwf: number;
+  extraChargeRwf: number;
+} {
+  const soldBelowMinimum = input.unitPriceRwf < input.minSellingPriceRwf;
+
+  if (soldBelowMinimum) {
+    return {
+      priceAction: "below_minimum",
+      soldBelowMinimum: true,
+      discountRwf: Math.max(0, input.sellingPriceRwf - input.unitPriceRwf),
+      extraChargeRwf: 0,
+    };
+  }
+
+  if (input.unitPriceRwf < input.sellingPriceRwf) {
+    return {
+      priceAction: "discount",
+      soldBelowMinimum: false,
+      discountRwf: input.sellingPriceRwf - input.unitPriceRwf,
+      extraChargeRwf: 0,
+    };
+  }
+
+  if (input.unitPriceRwf > input.sellingPriceRwf) {
+    return {
+      priceAction: "extra_charge",
+      soldBelowMinimum: false,
+      discountRwf: 0,
+      extraChargeRwf: input.unitPriceRwf - input.sellingPriceRwf,
+    };
+  }
+
+  return {
+    priceAction: "normal",
+    soldBelowMinimum: false,
+    discountRwf: 0,
+    extraChargeRwf: 0,
+  };
+}
+
 export async function salesRoutes(app: FastifyInstance) {
   app.post(
     "/",
@@ -250,6 +305,10 @@ export async function salesRoutes(app: FastifyInstance) {
 
       const productLines: ProductLine[] = [];
       let subtotalRwf = 0;
+      let normalSubtotalRwf = 0;
+      let totalDiscountRwf = 0;
+      let totalExtraChargeRwf = 0;
+      let hasSpecialPrice = false;
 
       for (const item of data.items) {
         const [product] = await db
@@ -279,9 +338,13 @@ export async function salesRoutes(app: FastifyInstance) {
           });
         }
 
-        const soldBelowMinimum = item.unitPriceRwf < product.minSellingPriceRwf;
+        const priceResult = getPriceAction({
+          unitPriceRwf: item.unitPriceRwf,
+          sellingPriceRwf: product.sellingPriceRwf,
+          minSellingPriceRwf: product.minSellingPriceRwf,
+        });
 
-        if (soldBelowMinimum && auth.role !== "owner") {
+        if (priceResult.soldBelowMinimum && auth.role !== "owner") {
           return reply.code(403).send({
             ok: false,
             message:
@@ -289,15 +352,38 @@ export async function salesRoutes(app: FastifyInstance) {
           });
         }
 
+        if (priceResult.priceAction !== "normal") {
+          hasSpecialPrice = true;
+        }
+
         const lineTotalRwf = item.quantity * item.unitPriceRwf;
+        const normalLineTotalRwf = item.quantity * product.sellingPriceRwf;
+
         subtotalRwf += lineTotalRwf;
+        normalSubtotalRwf += normalLineTotalRwf;
+        totalDiscountRwf += priceResult.discountRwf * item.quantity;
+        totalExtraChargeRwf += priceResult.extraChargeRwf * item.quantity;
 
         productLines.push({
           product,
           quantity: item.quantity,
           unitPriceRwf: item.unitPriceRwf,
+          normalUnitPriceRwf: product.sellingPriceRwf,
+          minSellingPriceRwf: product.minSellingPriceRwf,
           lineTotalRwf,
-          soldBelowMinimum,
+          normalLineTotalRwf,
+          soldBelowMinimum: priceResult.soldBelowMinimum,
+          priceAction: priceResult.priceAction,
+          discountRwf: priceResult.discountRwf,
+          extraChargeRwf: priceResult.extraChargeRwf,
+        });
+      }
+
+      if (hasSpecialPrice && !cleanOptional(data.notes)) {
+        return reply.code(400).send({
+          ok: false,
+          message:
+            "Add a sale note explaining the discount or extra charge before saving.",
         });
       }
 
@@ -420,7 +506,7 @@ export async function salesRoutes(app: FastifyInstance) {
             paymentStatus: paymentResult.paymentStatus,
 
             subtotalRwf,
-            discountRwf: 0,
+            discountRwf: totalDiscountRwf,
             totalAmountRwf: subtotalRwf,
             amountPaidRwf,
             balanceRwf: paymentResult.balanceRwf,
@@ -588,6 +674,13 @@ export async function salesRoutes(app: FastifyInstance) {
           payment: createdPayment,
           debt: createdDebt,
           installments: createdInstallments,
+          priceControl: {
+            normalSubtotalRwf,
+            actualSubtotalRwf: subtotalRwf,
+            discountRwf: totalDiscountRwf,
+            extraChargeRwf: totalExtraChargeRwf,
+            hasSpecialPrice,
+          },
         };
       });
 
