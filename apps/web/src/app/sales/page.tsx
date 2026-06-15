@@ -2,11 +2,9 @@
 
 import {
   AlertTriangle,
-  CalendarClock,
   CheckCircle2,
-  Eye,
   Loader2,
-  Package,
+  Minus,
   Plus,
   RefreshCw,
   Search,
@@ -21,10 +19,8 @@ import type { FormEvent, ReactNode } from "react";
 import {
   InstallmentFrequency,
   SaleCustomerType,
-  SaleListItem,
   SalePaymentMethod,
   createSale,
-  getSales,
 } from "@/lib/sales";
 import { Product, getProducts } from "@/lib/products";
 import { useEffect, useMemo, useState } from "react";
@@ -32,44 +28,34 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { AsyncButton } from "@/components/ui/AsyncButton";
 import { getToken } from "@/lib/auth";
+import { requestSpecialPrice } from "@/lib/special-price";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 
-type SaleItemForm = {
+type CartItem = {
   rowId: string;
   productId: string;
-  quantity: string;
-  unitPriceRwf: string;
+  quantity: number;
+  discountRwf: number;
+  specialPriceReason: string;
+  specialPriceRequested: boolean;
 };
 
 type PaymentMode = "paid_now" | "partial" | "pay_later" | "installment";
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
-function makeRow(): SaleItemForm {
+function makeRow(productId: string): CartItem {
   return {
     rowId: Math.random().toString(36).slice(2),
-    productId: "",
-    quantity: "1",
-    unitPriceRwf: "0",
+    productId,
+    quantity: 1,
+    discountRwf: 0,
+    specialPriceReason: "",
+    specialPriceRequested: false,
   };
 }
 
 function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Not set";
-
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function makeEveningLocalValue() {
@@ -92,30 +78,16 @@ function localDateTimeToIso(value: string) {
   return new Date(value).toISOString();
 }
 
-function addFrequency(
-  startDate: Date,
-  frequency: InstallmentFrequency,
-  step: number,
-) {
-  const date = new Date(startDate);
-
-  if (frequency === "daily") date.setDate(date.getDate() + step);
-  if (frequency === "weekly") date.setDate(date.getDate() + step * 7);
-  if (frequency === "monthly") date.setMonth(date.getMonth() + step);
-
-  return date;
-}
-
 export default function SalesPage() {
   const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [sales, setSales] = useState<SaleListItem[]>([]);
   const [cashSession, setCashSession] = useState<CashSession | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [requestingApprovalId, setRequestingApprovalId] = useState("");
   const [message, setMessage] = useState("");
 
   const [customerType, setCustomerType] = useState<SaleCustomerType>("walk_in");
@@ -125,32 +97,24 @@ export default function SalesPage() {
 
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [newCustomerAddress, setNewCustomerAddress] = useState("");
-  const [newCustomerNotes, setNewCustomerNotes] = useState("");
 
-  const [items, setItems] = useState<SaleItemForm[]>([makeRow()]);
+  const [productSearch, setProductSearch] = useState("");
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("paid_now");
   const [amountPaidRwf, setAmountPaidRwf] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("cash");
-  const [paymentNote, setPaymentNote] = useState("");
   const [expectedPaymentAt, setExpectedPaymentAt] = useState("");
-  const [saleNotes, setSaleNotes] = useState("");
-
   const [numberOfInstallments, setNumberOfInstallments] = useState("3");
   const [installmentFrequency, setInstallmentFrequency] =
     useState<InstallmentFrequency>("weekly");
-  const [firstInstallmentDueAt, setFirstInstallmentDueAt] = useState("");
-
-  const [recentSalesSearch, setRecentSalesSearch] = useState("");
-  const [visibleSalesCount, setVisibleSalesCount] = useState(5);
 
   const isCashOpen = cashSession?.status === "open";
 
   const cashMessage = !cashSession
     ? "Cash is not open. Open cash before creating sales."
     : cashSession.status === "closed"
-      ? "Cash is closed. Sales are blocked for this business date."
+      ? "Cash is closed. Sales are blocked."
       : "";
 
   const activeProducts = useMemo(
@@ -163,6 +127,24 @@ export default function SalesPage() {
     [customers],
   );
 
+  const filteredProducts = useMemo(() => {
+    const term = productSearch.trim().toLowerCase();
+
+    if (!term) return activeProducts.slice(0, 8);
+
+    return activeProducts
+      .filter((product) => {
+        return (
+          product.name.toLowerCase().includes(term) ||
+          product.sku.toLowerCase().includes(term) ||
+          (product.brand || "").toLowerCase().includes(term) ||
+          (product.model || "").toLowerCase().includes(term) ||
+          (product.categoryName || "").toLowerCase().includes(term)
+        );
+      })
+      .slice(0, 8);
+  }, [activeProducts, productSearch]);
+
   const filteredCustomers = useMemo(() => {
     const term = customerSearch.trim().toLowerCase();
 
@@ -172,8 +154,7 @@ export default function SalesPage() {
       .filter((customer) => {
         return (
           customer.name.toLowerCase().includes(term) ||
-          (customer.phone || "").toLowerCase().includes(term) ||
-          (customer.address || "").toLowerCase().includes(term)
+          (customer.phone || "").toLowerCase().includes(term)
         );
       })
       .slice(0, 6);
@@ -184,11 +165,46 @@ export default function SalesPage() {
     [customers, customerId],
   );
 
-  const totalAmountRwf = useMemo(() => {
-    return items.reduce((sum, item) => {
-      return sum + Number(item.quantity || 0) * Number(item.unitPriceRwf || 0);
-    }, 0);
-  }, [items]);
+  const cartLines = useMemo(() => {
+    return cartItems.map((item) => {
+      const product = products.find(
+        (productItem) => productItem.id === item.productId,
+      );
+
+      const normalPrice = Number(product?.sellingPriceRwf || 0);
+      const minimumPrice = Number(product?.minSellingPriceRwf || 0);
+      const discount = Math.max(0, Number(item.discountRwf || 0));
+      const finalUnitPrice = Math.max(0, normalPrice - discount);
+      const lineTotal = finalUnitPrice * item.quantity;
+      const belowMinimum = Boolean(product && finalUnitPrice < minimumPrice);
+
+      return {
+        item,
+        product,
+        normalPrice,
+        minimumPrice,
+        discount,
+        finalUnitPrice,
+        lineTotal,
+        belowMinimum,
+      };
+    });
+  }, [cartItems, products]);
+
+  const subtotalRwf = cartLines.reduce(
+    (sum, line) => sum + line.normalPrice * line.item.quantity,
+    0,
+  );
+
+  const totalDiscountRwf = cartLines.reduce(
+    (sum, line) => sum + line.discount * line.item.quantity,
+    0,
+  );
+
+  const totalAmountRwf = cartLines.reduce(
+    (sum, line) => sum + line.lineTotal,
+    0,
+  );
 
   const finalAmountPaidRwf = useMemo(() => {
     if (paymentMode === "paid_now") return totalAmountRwf;
@@ -197,64 +213,12 @@ export default function SalesPage() {
   }, [amountPaidRwf, paymentMode, totalAmountRwf]);
 
   const balanceRwf = Math.max(0, totalAmountRwf - finalAmountPaidRwf);
-
-  const paidSales = sales.filter((sale) => sale.balanceRwf <= 0);
-  const unpaidSales = sales.filter((sale) => sale.balanceRwf > 0);
-
-  const filteredRecentSales = useMemo(() => {
-    const term = recentSalesSearch.trim().toLowerCase();
-
-    if (!term) return sales;
-
-    return sales.filter((sale) => {
-      return (
-        sale.saleNumber.toLowerCase().includes(term) ||
-        (sale.customerName || "").toLowerCase().includes(term) ||
-        (sale.walkInName || "").toLowerCase().includes(term) ||
-        (sale.soldByName || "").toLowerCase().includes(term)
-      );
-    });
-  }, [recentSalesSearch, sales]);
-
-  const visibleRecentSales = useMemo(
-    () => filteredRecentSales.slice(0, visibleSalesCount),
-    [filteredRecentSales, visibleSalesCount],
-  );
-
-  const hasMoreRecentSales = visibleSalesCount < filteredRecentSales.length;
-
-  const installmentPreview = useMemo(() => {
-    if (paymentMode !== "installment") return [];
-
-    const count = Math.max(1, Number(numberOfInstallments || 1));
-    const baseAmount = Math.floor(balanceRwf / count);
-    const remainder = balanceRwf % count;
-    const firstDueDate = firstInstallmentDueAt
-      ? new Date(firstInstallmentDueAt)
-      : new Date();
-
-    return Array.from({ length: count }).map((_, index) => {
-      const isLast = index === count - 1;
-
-      return {
-        number: index + 1,
-        amount: isLast ? baseAmount + remainder : baseAmount,
-        dueDate: addFrequency(firstDueDate, installmentFrequency, index),
-      };
-    });
-  }, [
-    balanceRwf,
-    firstInstallmentDueAt,
-    installmentFrequency,
-    numberOfInstallments,
-    paymentMode,
-  ]);
+  const hasBelowMinimum = cartLines.some((line) => line.belowMinimum);
+  const hasCart = cartLines.length > 0;
+  const creditDisabledForWalkIn = customerType === "walk_in";
 
   useEffect(() => {
-    const evening = makeEveningLocalValue();
-
-    setExpectedPaymentAt(evening);
-    setFirstInstallmentDueAt(evening);
+    setExpectedPaymentAt(makeEveningLocalValue());
     loadData();
   }, []);
 
@@ -266,65 +230,52 @@ export default function SalesPage() {
     setMessage("");
 
     try {
-      const [productsResponse, customersResponse, salesResponse, cashResponse] =
+      const [productsResponse, customersResponse, cashResponse] =
         await Promise.all([
           getProducts(token),
           getCustomers(token),
-          getSales(token),
           getCashToday(token),
         ]);
 
       setProducts(productsResponse.products);
       setCustomers(customersResponse.customers);
-      setSales(salesResponse.sales);
       setCashSession(cashResponse.session);
-      setVisibleSalesCount(5);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Could not load sales.",
+        error instanceof Error ? error.message : "Could not load sales page.",
       );
     } finally {
       setLoading(false);
     }
   }
 
-  function resetSaleForm() {
-    const evening = makeEveningLocalValue();
-
+  function resetSale() {
     setCustomerType("walk_in");
     setCustomerId("");
     setCustomerSearch("");
     setWalkInName("Walk-in customer");
-
     setNewCustomerName("");
     setNewCustomerPhone("");
-    setNewCustomerAddress("");
-    setNewCustomerNotes("");
-
-    setItems([makeRow()]);
-
+    setProductSearch("");
+    setCartItems([]);
     setPaymentMode("paid_now");
     setAmountPaidRwf("0");
     setPaymentMethod("cash");
-    setPaymentNote("");
-    setExpectedPaymentAt(evening);
-    setSaleNotes("");
-
+    setExpectedPaymentAt(makeEveningLocalValue());
     setNumberOfInstallments("3");
     setInstallmentFrequency("weekly");
-    setFirstInstallmentDueAt(evening);
+    setMessage("");
   }
 
   function chooseCustomerType(type: SaleCustomerType) {
     setCustomerType(type);
     setCustomerId("");
     setCustomerSearch("");
+    setMessage("");
 
     if (type === "walk_in") {
       setPaymentMode("paid_now");
-      setAmountPaidRwf(String(totalAmountRwf));
-      setPaymentNote("");
-      setMessage("");
+      setAmountPaidRwf("0");
     }
   }
 
@@ -335,61 +286,115 @@ export default function SalesPage() {
     );
   }
 
-  function updateItem(rowId: string, key: keyof SaleItemForm, value: string) {
-    setItems((current) =>
-      current.map((item) => {
-        if (item.rowId !== rowId) return item;
+  function addProduct(product: Product) {
+    if (product.currentStock <= 0) {
+      setMessage(`${product.name} is out of stock.`);
+      return;
+    }
 
-        if (key === "productId") {
-          const product = products.find(
-            (productItem) => productItem.id === value,
-          );
+    setCartItems((current) => {
+      const existing = current.find((item) => item.productId === product.id);
 
-          return {
-            ...item,
-            productId: value,
-            unitPriceRwf: product
-              ? String(product.sellingPriceRwf)
-              : item.unitPriceRwf,
-          };
-        }
+      if (existing) {
+        return current.map((item) =>
+          item.productId === product.id
+            ? {
+                ...item,
+                quantity: Math.min(product.currentStock, item.quantity + 1),
+              }
+            : item,
+        );
+      }
 
-        return {
-          ...item,
-          [key]: value,
-        };
-      }),
+      return [...current, makeRow(product.id)];
+    });
+
+    setProductSearch("");
+    setMessage("");
+  }
+
+  function updateCartItem(rowId: string, nextItem: Partial<CartItem>) {
+    setCartItems((current) =>
+      current.map((item) =>
+        item.rowId === rowId
+          ? {
+              ...item,
+              ...nextItem,
+            }
+          : item,
+      ),
     );
   }
 
-  function addItemRow() {
-    setItems((current) => [...current, makeRow()]);
-  }
-
-  function removeItemRow(rowId: string) {
-    setItems((current) =>
-      current.length === 1
-        ? current
-        : current.filter((item) => item.rowId !== rowId),
-    );
+  function removeCartItem(rowId: string) {
+    setCartItems((current) => current.filter((item) => item.rowId !== rowId));
   }
 
   function switchPaymentMode(mode: PaymentMode) {
     if (customerType === "walk_in" && mode !== "paid_now") {
-      setPaymentMode("paid_now");
-      setAmountPaidRwf(String(totalAmountRwf));
       setMessage(
-        "Walk-in customers cannot buy on credit. Choose existing customer or new customer.",
+        "Walk-in customer must pay full amount now. Choose existing or new customer for credit.",
       );
+      setPaymentMode("paid_now");
       return;
     }
 
     setMessage("");
     setPaymentMode(mode);
 
-    if (mode === "paid_now") setAmountPaidRwf(String(totalAmountRwf));
+    if (mode === "paid_now") setAmountPaidRwf("0");
     if (mode === "pay_later") setAmountPaidRwf("0");
     if (mode === "partial" || mode === "installment") setAmountPaidRwf("0");
+  }
+
+  async function handleRequestSpecialPrice(rowId: string) {
+    const token = getToken();
+    if (!token) return;
+
+    const line = cartLines.find((cartLine) => cartLine.item.rowId === rowId);
+
+    if (!line?.product) {
+      setMessage("Choose product before requesting approval.");
+      return;
+    }
+
+    if (!line.belowMinimum) {
+      setMessage("Approval is only needed when final price is below minimum.");
+      return;
+    }
+
+    if (!line.item.specialPriceReason.trim()) {
+      setMessage("Write the reason for special price approval.");
+      return;
+    }
+
+    setRequestingApprovalId(rowId);
+    setMessage("");
+
+    try {
+      await requestSpecialPrice(token, {
+        productId: line.product.id,
+        requestedPriceRwf: line.finalUnitPrice,
+        quantity: line.item.quantity,
+        reason: line.item.specialPriceReason,
+      });
+
+      updateCartItem(rowId, {
+        specialPriceRequested: true,
+      });
+
+      setMessage(
+        "Special price request sent. Wait for owner/manager approval.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not request special price.",
+      );
+    } finally {
+      setRequestingApprovalId("");
+    }
   }
 
   async function handleCreateSale(event: FormEvent<HTMLFormElement>) {
@@ -400,36 +405,20 @@ export default function SalesPage() {
       return;
     }
 
-    const token = getToken();
-    if (!token) return;
-
-    const cleanItems = items.map((item) => ({
-      productId: item.productId,
-      quantity: Number(item.quantity || 0),
-      unitPriceRwf: Number(item.unitPriceRwf || 0),
-    }));
-
-    const hasInvalidItem = cleanItems.some(
-      (item) => !item.productId || item.quantity < 1 || item.unitPriceRwf < 0,
-    );
-
-    if (hasInvalidItem) {
-      setMessage("Choose product, quantity, and selling price correctly.");
+    if (!hasCart) {
+      setMessage("Add at least one product to cart.");
       return;
     }
 
-    if (customerType === "walk_in" && paymentMode !== "paid_now") {
-      setMessage("Walk-in customers must pay full amount now.");
-      return;
-    }
-
-    if (customerType === "walk_in" && balanceRwf > 0) {
-      setMessage("Walk-in customers cannot have balance.");
+    if (hasBelowMinimum) {
+      setMessage(
+        "One product is below minimum price. Request approval before saving.",
+      );
       return;
     }
 
     if (customerType === "existing" && !customerId) {
-      setMessage("Search and choose an existing customer.");
+      setMessage("Choose an existing customer.");
       return;
     }
 
@@ -438,29 +427,29 @@ export default function SalesPage() {
       return;
     }
 
+    if (customerType === "walk_in" && balanceRwf > 0) {
+      setMessage("Walk-in customer cannot have balance.");
+      return;
+    }
+
     if (finalAmountPaidRwf > totalAmountRwf) {
       setMessage("Amount paid cannot be greater than sale total.");
       return;
     }
 
-    if (paymentMode === "installment") {
-      const count = Number(numberOfInstallments || 0);
+    const invalidStock = cartLines.find(
+      (line) => line.product && line.item.quantity > line.product.currentStock,
+    );
 
-      if (balanceRwf <= 0) {
-        setMessage("Installment plan needs remaining balance.");
-        return;
-      }
-
-      if (!count || count < 1) {
-        setMessage("Number of installments must be at least 1.");
-        return;
-      }
-
-      if (!firstInstallmentDueAt) {
-        setMessage("Choose first installment due date.");
-        return;
-      }
+    if (invalidStock?.product) {
+      setMessage(
+        `${invalidStock.product.name} has only ${invalidStock.product.currentStock} in stock.`,
+      );
+      return;
     }
+
+    const token = getToken();
+    if (!token) return;
 
     setSaving(true);
     setMessage("");
@@ -475,32 +464,34 @@ export default function SalesPage() {
             ? {
                 name: newCustomerName,
                 phone: newCustomerPhone,
-                address: newCustomerAddress,
-                notes: newCustomerNotes,
               }
             : undefined,
-        items: cleanItems,
+        items: cartLines.map((line) => ({
+          productId: line.item.productId,
+          quantity: line.item.quantity,
+          unitPriceRwf: line.finalUnitPrice,
+        })),
         payment: {
           amountPaidRwf: finalAmountPaidRwf,
           method: paymentMethod,
-          note: paymentNote,
           expectedPaymentAt:
-            balanceRwf > 0 && paymentMode !== "installment"
-              ? localDateTimeToIso(expectedPaymentAt)
-              : undefined,
+            balanceRwf > 0 ? localDateTimeToIso(expectedPaymentAt) : undefined,
           installmentPlan:
             paymentMode === "installment"
               ? {
                   numberOfInstallments: Number(numberOfInstallments || 1),
                   frequency: installmentFrequency,
-                  firstDueAt: localDateTimeToIso(firstInstallmentDueAt),
+                  firstDueAt: localDateTimeToIso(expectedPaymentAt),
                 }
               : undefined,
         },
-        notes: saleNotes,
+        notes:
+          totalDiscountRwf > 0
+            ? `Discount given: ${formatRwf(totalDiscountRwf)}`
+            : undefined,
       });
 
-      resetSaleForm();
+      resetSale();
       router.push(`/sales/${response.sale.id}`);
     } catch (error) {
       setMessage(
@@ -511,21 +502,19 @@ export default function SalesPage() {
     }
   }
 
-  const creditDisabledForWalkIn = customerType === "walk_in";
-
   return (
-    <AppShell title="Sell">
+    <AppShell title="Sales">
       <div className={styles.salesPage}>
         <section className={styles.posHeader}>
           <div>
             <span className={styles.kicker}>
               <ShoppingCart size={15} />
-              POS checkout
+              Seller workspace
             </span>
 
-            <h1>Sell</h1>
+            <h1>New Sale</h1>
 
-            <p>Choose customer, add products, confirm payment, save sale.</p>
+            <p>Choose customer, search product, add to cart, take payment.</p>
           </div>
 
           <div className={styles.headerActions}>
@@ -563,13 +552,21 @@ export default function SalesPage() {
             <CheckCircle2 size={20} />
             <div>
               <strong>Ready to sell</strong>
-              <span>Cash is open. Start with customer, then products.</span>
+              <span>
+                Cash is open. Start with customer then product search.
+              </span>
             </div>
           </section>
         )}
 
+        {message ? <div className={styles.messageBox}>{message}</div> : null}
+
         <div className={styles.posLayout}>
-          <form onSubmit={handleCreateSale} className={styles.checkoutPanel}>
+          <form
+            id="sales-checkout-form"
+            onSubmit={handleCreateSale}
+            className={styles.checkoutPanel}
+          >
             <section className={styles.checkoutStep}>
               <StepTitle number="1" title="Customer" />
 
@@ -611,7 +608,7 @@ export default function SalesPage() {
               {customerType === "existing" ? (
                 <div className={styles.customerBlock}>
                   <label className="staff-form-group">
-                    <span>Find customer</span>
+                    <span>Search customer</span>
                     <div className="hdr-search">
                       <Search size={14} />
                       <input
@@ -620,7 +617,7 @@ export default function SalesPage() {
                           setCustomerSearch(event.target.value);
                           setCustomerId("");
                         }}
-                        placeholder="Name or phone..."
+                        placeholder="Customer name or phone..."
                       />
                     </div>
                   </label>
@@ -677,153 +674,204 @@ export default function SalesPage() {
                       }
                     />
                   </label>
-
-                  <label className="staff-form-group">
-                    <span>Address</span>
-                    <input
-                      value={newCustomerAddress}
-                      onChange={(event) =>
-                        setNewCustomerAddress(event.target.value)
-                      }
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Notes</span>
-                    <input
-                      value={newCustomerNotes}
-                      onChange={(event) =>
-                        setNewCustomerNotes(event.target.value)
-                      }
-                    />
-                  </label>
                 </div>
               ) : null}
             </section>
 
             <section className={styles.checkoutStep}>
-              <div className={styles.stepTop}>
-                <StepTitle number="2" title="Products" />
+              <StepTitle number="2" title="Search product" />
 
-                <button
-                  className="btn btn-outline btn-sm"
-                  type="button"
-                  onClick={addItemRow}
-                >
-                  <Plus size={13} />
-                  Add product
-                </button>
-              </div>
+              <label className="staff-form-group">
+                <span>Product search</span>
+                <div className="hdr-search">
+                  <Search size={14} />
+                  <input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Search product name, SKU, brand, model..."
+                  />
+                </div>
+              </label>
 
-              <div className={styles.itemStack}>
-                {items.map((item, index) => {
-                  const product = products.find(
-                    (productItem) => productItem.id === item.productId,
-                  );
-                  const lineTotal =
-                    Number(item.quantity || 0) * Number(item.unitPriceRwf || 0);
+              <div className={styles.productResults}>
+                {loading ? (
+                  <div className={styles.loadingLine}>
+                    <Loader2 className="spin" size={16} />
+                    Loading products...
+                  </div>
+                ) : null}
 
-                  return (
-                    <article key={item.rowId} className={styles.saleItem}>
-                      <div className={styles.saleItemTop}>
-                        <strong>Item {index + 1}</strong>
+                {filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    className={styles.productResult}
+                    onClick={() => addProduct(product)}
+                    disabled={product.currentStock <= 0}
+                  >
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>
+                        {product.sku} · Stock {product.currentStock} ·{" "}
+                        {formatRwf(product.sellingPriceRwf)}
+                      </span>
+                    </div>
 
-                        <button
-                          type="button"
-                          className={styles.removeButton}
-                          onClick={() => removeItemRow(item.rowId)}
-                          disabled={items.length === 1}
-                        >
-                          <Trash2 size={13} />
-                          Remove
-                        </button>
-                      </div>
+                    <span
+                      className={
+                        product.currentStock > 0
+                          ? "badge badge-green"
+                          : "badge badge-orange"
+                      }
+                    >
+                      {product.currentStock > 0 ? "Add" : "No stock"}
+                    </span>
+                  </button>
+                ))}
 
-                      <div className={styles.itemGrid}>
-                        <label className="staff-form-group">
-                          <span>Product</span>
-                          <select
-                            value={item.productId}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "productId",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          >
-                            <option value="">Choose product</option>
-                            {activeProducts.map((productItem) => (
-                              <option
-                                key={productItem.id}
-                                value={productItem.id}
-                                disabled={productItem.currentStock <= 0}
-                              >
-                                {productItem.name} · Stock:{" "}
-                                {productItem.currentStock} ·{" "}
-                                {formatRwf(productItem.sellingPriceRwf)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label className="staff-form-group">
-                          <span>Qty</span>
-                          <input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "quantity",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          />
-                        </label>
-
-                        <label className="staff-form-group">
-                          <span>Price</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={item.unitPriceRwf}
-                            onChange={(event) =>
-                              updateItem(
-                                item.rowId,
-                                "unitPriceRwf",
-                                event.target.value,
-                              )
-                            }
-                            required
-                          />
-                        </label>
-
-                        <div className={styles.lineTotalBox}>
-                          <span>Total</span>
-                          <strong>{formatRwf(lineTotal)}</strong>
-                        </div>
-                      </div>
-
-                      {product ? (
-                        <div className={styles.itemMeta}>
-                          <span>Stock: {product.currentStock}</span>
-                          <span>
-                            Minimum: {formatRwf(product.minSellingPriceRwf)}
-                          </span>
-                        </div>
-                      ) : null}
-                    </article>
-                  );
-                })}
+                {!loading && filteredProducts.length === 0 ? (
+                  <EmptyCard
+                    icon={<Search size={20} />}
+                    title="No product found"
+                    text="Search another name, SKU, brand, or model."
+                  />
+                ) : null}
               </div>
             </section>
 
             <section className={styles.checkoutStep}>
-              <StepTitle number="3" title="Payment" />
+              <StepTitle number="3" title="Cart" />
+
+              <div className={styles.cartList}>
+                {cartLines.map((line) => {
+                  if (!line.product) return null;
+
+                  return (
+                    <article key={line.item.rowId} className={styles.cartItem}>
+                      <div className={styles.cartTop}>
+                        <div>
+                          <strong>{line.product.name}</strong>
+                          <span>
+                            Stock {line.product.currentStock} · Normal{" "}
+                            {formatRwf(line.normalPrice)} · Min{" "}
+                            {formatRwf(line.minimumPrice)}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className={styles.removeButton}
+                          onClick={() => removeCartItem(line.item.rowId)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+
+                      <div className={styles.cartControls}>
+                        <QuantityControl
+                          value={line.item.quantity}
+                          max={line.product.currentStock}
+                          onChange={(quantity) =>
+                            updateCartItem(line.item.rowId, { quantity })
+                          }
+                        />
+
+                        <label className="staff-form-group">
+                          <span>Discount per item</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={line.item.discountRwf}
+                            onChange={(event) =>
+                              updateCartItem(line.item.rowId, {
+                                discountRwf: Number(event.target.value || 0),
+                                specialPriceRequested: false,
+                              })
+                            }
+                          />
+                        </label>
+
+                        <div className={styles.finalPriceBox}>
+                          <span>Final price</span>
+                          <strong>{formatRwf(line.finalUnitPrice)}</strong>
+                        </div>
+                      </div>
+
+                      {line.discount > 0 ? (
+                        <div
+                          className={
+                            line.belowMinimum
+                              ? styles.priceWarning
+                              : styles.priceDiscount
+                          }
+                        >
+                          <AlertTriangle size={15} />
+                          <span>
+                            {line.belowMinimum
+                              ? "Below minimum price. Approval required."
+                              : `Discount: ${formatRwf(line.discount)} per item.`}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {line.belowMinimum ? (
+                        <div className={styles.approvalBox}>
+                          <label className="staff-form-group">
+                            <span>Reason for special price</span>
+                            <input
+                              value={line.item.specialPriceReason}
+                              onChange={(event) =>
+                                updateCartItem(line.item.rowId, {
+                                  specialPriceReason: event.target.value,
+                                })
+                              }
+                              placeholder="Example: owner approved loyal customer discount"
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            className={styles.approvalButton}
+                            onClick={() =>
+                              handleRequestSpecialPrice(line.item.rowId)
+                            }
+                            disabled={
+                              requestingApprovalId === line.item.rowId ||
+                              line.item.specialPriceRequested
+                            }
+                          >
+                            {requestingApprovalId === line.item.rowId ? (
+                              <Loader2 className="spin" size={14} />
+                            ) : (
+                              <WalletCards size={14} />
+                            )}
+                            {line.item.specialPriceRequested
+                              ? "Request sent"
+                              : "Request approval"}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <div className={styles.lineTotal}>
+                        <span>Line total</span>
+                        <strong>{formatRwf(line.lineTotal)}</strong>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {cartLines.length === 0 ? (
+                  <EmptyCard
+                    icon={<ShoppingCart size={20} />}
+                    title="Cart is empty"
+                    text="Search product above and tap Add."
+                  />
+                ) : null}
+              </div>
+            </section>
+
+            <section className={styles.checkoutStep}>
+              <StepTitle number="4" title="Payment" />
 
               <div className={styles.paymentGrid}>
                 <ChoiceCard
@@ -887,7 +935,7 @@ export default function SalesPage() {
                   </select>
                 </label>
 
-                {balanceRwf > 0 && paymentMode !== "installment" ? (
+                {balanceRwf > 0 ? (
                   <label className="staff-form-group">
                     <span>Expected payment</span>
                     <input
@@ -900,19 +948,8 @@ export default function SalesPage() {
                   </label>
                 ) : null}
 
-                <label className="staff-form-group">
-                  <span>Payment note</span>
-                  <input
-                    value={paymentNote}
-                    onChange={(event) => setPaymentNote(event.target.value)}
-                    placeholder="Optional"
-                  />
-                </label>
-              </div>
-
-              {paymentMode === "installment" ? (
-                <div className={styles.installmentBox}>
-                  <div className={styles.simpleGrid}>
+                {paymentMode === "installment" ? (
+                  <>
                     <label className="staff-form-group">
                       <span>Installments</span>
                       <input
@@ -941,52 +978,16 @@ export default function SalesPage() {
                         <option value="monthly">Monthly</option>
                       </select>
                     </label>
-
-                    <label className="staff-form-group">
-                      <span>First due</span>
-                      <input
-                        type="datetime-local"
-                        value={firstInstallmentDueAt}
-                        onChange={(event) =>
-                          setFirstInstallmentDueAt(event.target.value)
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  <div className={styles.installmentList}>
-                    {installmentPreview.map((installment) => (
-                      <div
-                        key={installment.number}
-                        className={styles.installmentRow}
-                      >
-                        <span>#{installment.number}</span>
-                        <strong>{formatRwf(installment.amount)}</strong>
-                        <span>
-                          {formatDate(installment.dueDate.toISOString())}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <label className="staff-form-group">
-                <span>Sale note</span>
-                <textarea
-                  value={saleNotes}
-                  onChange={(event) => setSaleNotes(event.target.value)}
-                  placeholder="Optional"
-                />
-              </label>
+                  </>
+                ) : null}
+              </div>
             </section>
-
-            {message ? (
-              <div className={styles.messageBox}>{message}</div>
-            ) : null}
 
             <div className={styles.mobileTotal}>
               <TotalBox
+                itemsCount={cartLines.length}
+                subtotal={subtotalRwf}
+                discount={totalDiscountRwf}
                 total={totalAmountRwf}
                 paid={finalAmountPaidRwf}
                 balance={balanceRwf}
@@ -996,14 +997,14 @@ export default function SalesPage() {
                 <button
                   type="button"
                   className="staff-btn staff-btn-outline"
-                  onClick={resetSaleForm}
+                  onClick={resetSale}
                 >
                   Reset
                 </button>
 
                 <AsyncButton
                   loading={saving}
-                  disabled={!isCashOpen}
+                  disabled={!isCashOpen || !hasCart || hasBelowMinimum}
                   type="submit"
                 >
                   <Plus size={15} />
@@ -1015,6 +1016,9 @@ export default function SalesPage() {
 
           <aside className={styles.checkoutSidebar}>
             <TotalBox
+              itemsCount={cartLines.length}
+              subtotal={subtotalRwf}
+              discount={totalDiscountRwf}
               total={totalAmountRwf}
               paid={finalAmountPaidRwf}
               balance={balanceRwf}
@@ -1024,106 +1028,21 @@ export default function SalesPage() {
               <button
                 type="button"
                 className="staff-btn staff-btn-outline"
-                onClick={resetSaleForm}
+                onClick={resetSale}
               >
                 Reset
               </button>
 
               <AsyncButton
+                form="sales-checkout-form"
                 loading={saving}
-                disabled={!isCashOpen}
+                disabled={!isCashOpen || !hasCart || hasBelowMinimum}
                 type="submit"
               >
                 <Plus size={15} />
                 Save sale
               </AsyncButton>
             </div>
-
-            <section className={styles.recentPanel}>
-              <div className={styles.recentTop}>
-                <div>
-                  <h2>Recent sales</h2>
-                  <p>Only latest important records.</p>
-                </div>
-
-                {loading ? <Loader2 className="spin" size={18} /> : null}
-              </div>
-
-              <div className={styles.recentSearch}>
-                <div className="hdr-search">
-                  <Search size={14} />
-                  <input
-                    value={recentSalesSearch}
-                    onChange={(event) => {
-                      setRecentSalesSearch(event.target.value);
-                      setVisibleSalesCount(5);
-                    }}
-                    placeholder="Search sale..."
-                  />
-                </div>
-              </div>
-
-              <div className={styles.salesList}>
-                {visibleRecentSales.map((sale) => (
-                  <article key={sale.id} className={styles.salesRow}>
-                    <div className={styles.saleMain}>
-                      <div className={styles.saleIcon}>
-                        <ShoppingCart size={16} />
-                      </div>
-
-                      <div>
-                        <strong>{sale.saleNumber}</strong>
-                        <span>
-                          {sale.customerName ||
-                            sale.walkInName ||
-                            "Walk-in customer"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className={styles.saleAmount}>
-                      <strong>{formatRwf(sale.totalAmountRwf)}</strong>
-                      <span
-                        className={
-                          sale.balanceRwf > 0
-                            ? styles.statusPending
-                            : styles.statusPaid
-                        }
-                      >
-                        {sale.balanceRwf > 0 ? "Balance" : "Paid"}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className={styles.viewButton}
-                      onClick={() => router.push(`/sales/${sale.id}`)}
-                    >
-                      <Eye size={13} />
-                      View
-                    </button>
-                  </article>
-                ))}
-
-                {filteredRecentSales.length === 0 ? (
-                  <EmptyCard
-                    icon={<Search size={22} />}
-                    title="No sales found"
-                    text="Try another sale number or customer."
-                  />
-                ) : null}
-              </div>
-
-              {hasMoreRecentSales ? (
-                <button
-                  className={styles.loadMoreButton}
-                  type="button"
-                  onClick={() => setVisibleSalesCount((current) => current + 5)}
-                >
-                  Show 5 more sales
-                </button>
-              ) : null}
-            </section>
           </aside>
         </div>
       </div>
@@ -1186,11 +1105,9 @@ function ChoiceCard({
     <button
       type="button"
       disabled={disabled}
-      className={cx(
-        styles.choiceCard,
-        selected && styles.choiceCardSelected,
-        disabled && styles.choiceCardDisabled,
-      )}
+      className={`${styles.choiceCard} ${
+        selected ? styles.choiceCardSelected : ""
+      } ${disabled ? styles.choiceCardDisabled : ""}`}
       onClick={onClick}
     >
       <strong>{title}</strong>
@@ -1199,11 +1116,48 @@ function ChoiceCard({
   );
 }
 
+function QuantityControl({
+  value,
+  max,
+  onChange,
+}: {
+  value: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className={styles.qtyControl}>
+      <span>Qty</span>
+
+      <div>
+        <button type="button" onClick={() => onChange(Math.max(1, value - 1))}>
+          <Minus size={13} />
+        </button>
+
+        <strong>{value}</strong>
+
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + 1))}
+        >
+          <Plus size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TotalBox({
+  itemsCount,
+  subtotal,
+  discount,
   total,
   paid,
   balance,
 }: {
+  itemsCount: number;
+  subtotal: number;
+  discount: number;
   total: number;
   paid: number;
   balance: number;
@@ -1216,25 +1170,34 @@ function TotalBox({
       </div>
 
       <div className={styles.totalGrid}>
-        <div>
-          <span>Paid</span>
-          <strong>{formatRwf(paid)}</strong>
-        </div>
-
-        <div className={balance > 0 ? styles.balanceDue : ""}>
-          <span>Balance</span>
-          <strong>{formatRwf(balance)}</strong>
-        </div>
+        <MiniTotal label="Items" value={String(itemsCount)} />
+        <MiniTotal label="Subtotal" value={formatRwf(subtotal)} />
+        <MiniTotal label="Discount" value={formatRwf(discount)} danger />
+        <MiniTotal label="Paid" value={formatRwf(paid)} />
       </div>
 
-      <div
-        className={
-          balance > 0 ? styles.totalStatusWarning : styles.totalStatusSuccess
-        }
-      >
-        {balance > 0 ? "Customer will owe balance" : "Fully paid"}
+      <div className={balance > 0 ? styles.balanceBox : styles.paidBox}>
+        <span>{balance > 0 ? "Balance" : "Status"}</span>
+        <strong>{balance > 0 ? formatRwf(balance) : "Fully paid"}</strong>
       </div>
     </section>
+  );
+}
+
+function MiniTotal({
+  label,
+  value,
+  danger = false,
+}: {
+  label: string;
+  value: string;
+  danger?: boolean;
+}) {
+  return (
+    <div className={styles.miniTotal}>
+      <span>{label}</span>
+      <strong className={danger ? styles.orangeText : ""}>{value}</strong>
+    </div>
   );
 }
 
