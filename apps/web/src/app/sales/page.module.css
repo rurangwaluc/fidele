@@ -129,16 +129,23 @@
   color: var(--gray-700);
 }
 
-.posWorkspace {
+.posShell {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
   align-items: start;
 }
 
-.productPanel,
-.salePanel,
-.totalPanel,
+.workArea {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.searchStrip,
+.cartPanel,
+.detailsPanel,
+.summaryPanel,
 .miniPanel {
   min-width: 0;
   border: 1px solid var(--border);
@@ -147,24 +154,27 @@
   box-shadow: var(--sh);
 }
 
-.productPanel,
-.salePanel {
+.searchStrip,
+.cartPanel,
+.detailsPanel,
+.summaryPanel {
   padding: 14px;
+}
+
+.searchStrip {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
-.totalPanel {
-  display: none;
-}
-
-.panelTitle {
+.searchTitle,
+.panelHeader {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.panelTitle > span {
+.searchTitle > span,
+.panelHeader > span {
   width: 30px;
   height: 30px;
   flex: 0 0 auto;
@@ -177,7 +187,8 @@
   font-weight: 950;
 }
 
-.panelTitle strong {
+.searchTitle strong,
+.panelHeader strong {
   display: block;
   color: var(--gray-900);
   font-size: 16px;
@@ -185,7 +196,8 @@
   line-height: 1.2;
 }
 
-.panelTitle small {
+.searchTitle small,
+.panelHeader small {
   display: block;
   margin-top: 3px;
   color: var(--gray-500);
@@ -214,61 +226,16 @@
   outline: 0;
   background: transparent;
   color: var(--gray-900);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 850;
 }
 
 .productResults,
 .cartList,
-.customerBlock,
+.stack,
 .customerResults {
   display: grid;
   gap: 8px;
-}
-
-.searchEmpty,
-.emptyCard {
-  min-height: 150px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--green-lt);
-  color: var(--gray-500);
-  padding: 22px;
-}
-
-.searchEmpty svg,
-.emptyCard div {
-  color: var(--green);
-}
-
-.searchEmpty strong,
-.emptyCard strong {
-  color: var(--gray-900);
-  font-size: 15px;
-  font-weight: 950;
-}
-
-.searchEmpty span,
-.emptyCard span {
-  max-width: 340px;
-  color: var(--gray-600);
-  font-size: 12px;
-  font-weight: 750;
-  line-height: 1.45;
-}
-
-.loadingLine {
-  padding: 13px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--gray-600);
-  font-size: 13px;
-  font-weight: 850;
 }
 
 .productResult {
@@ -308,12 +275,13 @@
   border: 1px solid rgba(245, 158, 11, 0.22);
 }
 
-.productInfo {
+.productInfo,
+.productMeta {
   min-width: 0;
 }
 
 .productInfo strong,
-.productPrice strong {
+.productMeta strong {
   display: block;
   color: var(--gray-900);
   font-size: 13px;
@@ -322,7 +290,7 @@
 }
 
 .productInfo span,
-.productPrice span {
+.productMeta span {
   display: block;
   margin-top: 3px;
   color: var(--gray-500);
@@ -330,10 +298,8 @@
   font-weight: 800;
 }
 
-.productPrice {
+.productMeta {
   grid-column: 1 / -1;
-  min-width: 0;
-  text-align: left;
 }
 
 .stockGood {
@@ -346,7 +312,8 @@
 
 .addPill {
   grid-column: 1 / -1;
-  min-width: 68px;
+  width: fit-content;
+  min-width: 72px;
   height: 32px;
   display: inline-flex;
   align-items: center;
@@ -358,17 +325,20 @@
   font-weight: 950;
 }
 
-.sectionLabel {
-  margin-bottom: 10px;
-  color: var(--gray-500);
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.35px;
-  text-transform: uppercase;
+.loadingLine {
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-600);
+  font-size: 13px;
+  font-weight: 850;
 }
 
-.cartArea {
-  min-width: 0;
+.cartPanel,
+.detailsPanel {
+  display: grid;
+  gap: 14px;
 }
 
 .cartItem {
@@ -381,14 +351,14 @@
   background: var(--gray-50);
 }
 
-.cartTop {
+.cartProduct {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.cartTop strong {
+.cartProduct strong {
   display: block;
   color: var(--gray-900);
   font-size: 14px;
@@ -397,7 +367,7 @@
   overflow-wrap: anywhere;
 }
 
-.cartTop span {
+.cartProduct span {
   display: block;
   margin-top: 4px;
   color: var(--gray-500);
@@ -451,18 +421,19 @@
   font-weight: 950;
 }
 
-.compactField {
+.field {
   min-width: 0;
   display: grid;
   gap: 7px;
 }
 
-.compactField span,
-.finalPriceBox span,
+.field span,
+.miniMoney span,
 .miniTotal span,
 .balanceBox span,
 .paidBox span,
-.totalHeader span {
+.totalHeader span,
+.summaryFacts span {
   color: var(--gray-500);
   font-size: 10px;
   font-weight: 950;
@@ -470,8 +441,8 @@
   letter-spacing: 0.35px;
 }
 
-.compactField input,
-.compactField select {
+.field input,
+.field select {
   min-width: 0;
   width: 100%;
   min-height: 42px;
@@ -485,7 +456,7 @@
   outline: 0;
 }
 
-.finalPriceBox,
+.miniMoney,
 .miniTotal,
 .balanceBox,
 .paidBox {
@@ -496,10 +467,11 @@
   background: var(--card);
 }
 
-.finalPriceBox strong,
+.miniMoney strong,
 .miniTotal strong,
 .balanceBox strong,
-.paidBox strong {
+.paidBox strong,
+.summaryFacts strong {
   display: block;
   margin-top: 6px;
   color: var(--gray-900);
@@ -555,7 +527,7 @@
   cursor: not-allowed;
 }
 
-.customerPaymentGrid {
+.detailsGrid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
@@ -565,52 +537,43 @@
   padding: 14px;
 }
 
-.optionGrid {
-  display: grid;
-  grid-template-columns: 1fr;
+.sectionLabel {
+  margin-bottom: 10px;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.segmentRow {
+  display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   margin-bottom: 10px;
 }
 
-.choiceCard {
-  min-width: 0;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  text-align: left;
+.choiceChip {
+  min-height: 36px;
+  flex: 1 1 86px;
   border: 1px solid var(--border);
   background: var(--gray-50);
   color: var(--gray-900);
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 950;
   cursor: pointer;
 }
 
-.choiceCard strong {
-  display: block;
-  color: var(--gray-900);
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.choiceCard span {
-  display: block;
-  margin: 0;
-  color: var(--gray-500);
-  font-size: 11px;
-  font-weight: 750;
-  text-align: right;
-}
-
-.choiceCardSelected {
+.choiceChipSelected {
   background: var(--orange-lt);
-  border-color: rgba(245, 158, 11, 0.5);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: var(--orange);
 }
 
-.choiceCardDisabled {
-  opacity: 0.48;
+.choiceChipDisabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -667,6 +630,11 @@
   gap: 8px;
 }
 
+.summaryPanel {
+  display: grid;
+  gap: 12px;
+}
+
 .totalBox {
   padding: 14px;
   display: grid;
@@ -687,7 +655,7 @@
   display: block;
   margin-top: 6px;
   color: var(--gray-900);
-  font-size: 31px;
+  font-size: 32px;
   font-weight: 950;
   letter-spacing: -1px;
   line-height: 1.05;
@@ -706,7 +674,7 @@
 }
 
 .balanceBox strong,
-.orangeText {
+.warningText {
   color: var(--orange) !important;
 }
 
@@ -719,25 +687,68 @@
   color: var(--green);
 }
 
-.totalActions {
+.summaryFacts {
+  display: grid;
+  gap: 8px;
+}
+
+.summaryFacts > div {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--gray-50);
+}
+
+.summaryActions {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
 }
 
-.totalActions :global(.staff-btn),
-.totalActions :global(button) {
+.summaryActions :global(.staff-btn),
+.summaryActions :global(button) {
   width: 100%;
+}
+
+.emptyCard {
+  min-height: 130px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--green-lt);
+  color: var(--gray-500);
+  padding: 22px;
+}
+
+.emptyCard div {
+  color: var(--green);
+}
+
+.emptyCard strong {
+  color: var(--gray-900);
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.emptyCard span {
+  max-width: 340px;
+  color: var(--gray-600);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 @media (min-width: 560px) {
   .productResult {
-    grid-template-columns: auto minmax(0, 1fr) minmax(120px, auto) auto;
+    grid-template-columns: auto minmax(0, 1fr) minmax(130px, auto) auto;
   }
 
-  .productPrice {
+  .productMeta {
     grid-column: auto;
-    min-width: 120px;
     text-align: right;
   }
 
@@ -745,12 +756,21 @@
     grid-column: auto;
   }
 
+  .cartControls {
+    grid-template-columns:
+      minmax(105px, 0.55fr)
+      minmax(120px, 0.65fr)
+      minmax(130px, 0.7fr)
+      minmax(130px, 0.7fr);
+    align-items: end;
+  }
+
   .twoFields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .totalGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .summaryFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -788,68 +808,43 @@
     width: auto;
   }
 
-  .productPanel,
-  .salePanel {
+  .searchStrip,
+  .cartPanel,
+  .detailsPanel,
+  .summaryPanel {
     padding: 18px;
   }
 
-  .cartControls {
-    grid-template-columns:
-      minmax(110px, 0.6fr)
-      minmax(120px, 0.65fr)
-      minmax(130px, 0.7fr)
-      minmax(130px, 0.7fr);
-    align-items: end;
-  }
-
-  .customerPaymentGrid {
+  .detailsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1180px) {
-  .posWorkspace {
-    grid-template-columns:
-      minmax(360px, 0.9fr)
-      minmax(0, 1.35fr)
-      minmax(320px, 0.65fr);
+  .posShell {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 0.34fr);
     gap: 18px;
   }
 
-  .productPanel,
-  .salePanel,
-  .totalPanel {
-    min-height: calc(100vh - 210px);
-  }
-
-  .productPanel {
-    position: sticky;
-    top: 18px;
-  }
-
-  .totalPanel {
-    display: grid;
-    gap: 14px;
+  .summaryPanel {
     position: sticky;
     top: 18px;
     border: 0;
     background: transparent;
     box-shadow: none;
+    padding: 0;
   }
 }
 
 @media (min-width: 1440px) {
-  .posWorkspace {
-    grid-template-columns:
-      minmax(390px, 0.85fr)
-      minmax(0, 1.45fr)
-      minmax(360px, 0.55fr);
+  .posShell {
+    grid-template-columns: minmax(0, 1fr) minmax(370px, 0.32fr);
   }
 }
 
 @media (max-width: 420px) {
-  .optionGrid,
-  .cartControls {
+  .cartControls,
+  .totalGrid {
     grid-template-columns: 1fr;
   }
 
