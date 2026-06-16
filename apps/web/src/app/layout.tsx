@@ -1,6 +1,8 @@
 import "./globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+import { PwaRegister } from "@/components/app/PwaRegister";
 import { Quicksand } from "next/font/google";
 
 const quicksand = Quicksand({
@@ -10,8 +12,25 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  title: "Electronic Retail Control",
-  description: "One-shop electronics business control system",
+  title: {
+    default: "Vuba Electronics",
+    template: "%s | Vuba Electronics",
+  },
+  description: "Business control system for Vuba Electronics.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Vuba Electronics",
+  appleWebApp: {
+    capable: true,
+    title: "Vuba Electronics",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f59e0b",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -32,6 +51,7 @@ export default function RootLayout({
             `,
           }}
         />
+        <PwaRegister />
         {children}
       </body>
     </html>
