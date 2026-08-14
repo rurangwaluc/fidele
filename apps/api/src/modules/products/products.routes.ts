@@ -8,16 +8,13 @@ import { z } from "zod";
 
 const createProductSchema = z.object({
   name: z.string().min(2),
-  sku: z.string().optional(),
-
-  categoryName: z.string().optional(),
+  categoryName: z.string().trim().min(1, "Category is required."),
 
   brand: z.string().optional(),
   model: z.string().optional(),
   description: z.string().optional(),
 
-  buyingPriceRwf: z.coerce.number().int().min(0).default(0),
-  sellingPriceRwf: z.coerce.number().int().min(0).default(0),
+  sellingPriceRwf: z.coerce.number().int().min(1, "Selling price must be greater than zero."),
   minSellingPriceRwf: z.coerce.number().int().min(0).default(0),
 
   lowStockAlert: z.coerce.number().int().min(0).default(1),
@@ -38,7 +35,7 @@ const updateProductSchema = z.object({
 
 const updatePriceSchema = z.object({
   buyingPriceRwf: z.coerce.number().int().min(0).optional(),
-  sellingPriceRwf: z.coerce.number().int().min(0).optional(),
+  sellingPriceRwf: z.coerce.number().int().min(1, "Selling price must be greater than zero.").optional(),
   minSellingPriceRwf: z.coerce.number().int().min(0).optional(),
   reason: z.string().min(2).optional(),
 });
@@ -58,14 +55,6 @@ function cleanSkuPart(value?: string) {
     .filter(Boolean);
 }
 
-function normalizeManualSku(value: string) {
-  return value
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 function makeSku(name: string, brand?: string, model?: string) {
   const tokens = [
     ...cleanSkuPart(brand),
@@ -80,6 +69,21 @@ function makeSku(name: string, brand?: string, model?: string) {
   return `${base || "PRODUCT"}-${suffix}`;
 }
 
+async function makeUniqueSku(name: string, brand?: string, model?: string) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const sku = makeSku(name, brand, model);
+    const [existing] = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.sku, sku))
+      .limit(1);
+
+    if (!existing) return sku;
+  }
+
+  throw new Error("Could not generate a unique product code.");
+}
+
 async function getOrCreateCategory(name?: string) {
   if (!name?.trim()) return null;
 
@@ -88,7 +92,7 @@ async function getOrCreateCategory(name?: string) {
   const [existing] = await db
     .select()
     .from(productCategories)
-    .where(eq(productCategories.name, cleanName))
+    .where(ilike(productCategories.name, cleanName))
     .limit(1);
 
   if (existing) return existing;
@@ -101,6 +105,22 @@ async function getOrCreateCategory(name?: string) {
     .returning();
 
   return created;
+}
+
+function canViewBuyingPrice(auth: { role: string; permissions: string[] }) {
+  return (
+    auth.role === "owner" || auth.permissions.includes("products.updatePrice")
+  );
+}
+
+function productForUser<T extends { buyingPriceRwf?: number }>(
+  product: T,
+  auth: { role: string; permissions: string[] },
+) {
+  if (canViewBuyingPrice(auth)) return product;
+
+  const { buyingPriceRwf: _buyingPriceRwf, ...safeProduct } = product;
+  return safeProduct;
 }
 
 export async function productsRoutes(app: FastifyInstance) {
@@ -177,7 +197,9 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return {
         ok: true,
-        products: rows,
+        products: rows.map((product) =>
+          productForUser(product, request.authUser!),
+        ),
       };
     },
   );
@@ -203,22 +225,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       const category = await getOrCreateCategory(data.categoryName);
 
-      const sku = data.sku?.trim()
-        ? normalizeManualSku(data.sku)
-        : makeSku(data.name, data.brand, data.model);
-
-      const [existingSku] = await db
-        .select()
-        .from(products)
-        .where(eq(products.sku, sku))
-        .limit(1);
-
-      if (existingSku) {
-        return reply.code(409).send({
-          ok: false,
-          message: "A product with this SKU already exists.",
-        });
-      }
+      const sku = await makeUniqueSku(data.name, data.brand, data.model);
 
       const [product] = await db
         .insert(products)
@@ -231,7 +238,7 @@ export async function productsRoutes(app: FastifyInstance) {
           model: data.model?.trim(),
           description: data.description?.trim(),
 
-          buyingPriceRwf: data.buyingPriceRwf,
+          buyingPriceRwf: 0,
           sellingPriceRwf: data.sellingPriceRwf,
           minSellingPriceRwf: data.minSellingPriceRwf,
 
@@ -257,7 +264,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return reply.code(201).send({
         ok: true,
-        product,
+        product: productForUser(product, auth),
       });
     },
   );
@@ -316,7 +323,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return {
         ok: true,
-        product,
+        product: productForUser(product, request.authUser!),
       };
     },
   );
@@ -389,7 +396,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return {
         ok: true,
-        product: updated,
+        product: productForUser(updated, auth),
       };
     },
   );
@@ -524,7 +531,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return {
         ok: true,
-        product: updated,
+        product: productForUser(updated, auth),
       };
     },
   );
@@ -583,7 +590,7 @@ export async function productsRoutes(app: FastifyInstance) {
 
       return {
         ok: true,
-        product: updated,
+        product: productForUser(updated, auth),
       };
     },
   );

@@ -1,29 +1,22 @@
 "use client";
 
 import {
-  AlertTriangle,
-  BadgeDollarSign,
-  Boxes,
-  CheckCircle2,
   Loader2,
   Package,
   Pencil,
   Plus,
   Power,
   PowerOff,
-  RefreshCw,
   Search,
   X,
 } from "lucide-react";
 import { AuthUser, getCurrentUser, getToken } from "@/lib/auth";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import {
   Product,
-  ProductCategory,
   activateProduct,
   createProduct,
   deactivateProduct,
-  getProductCategories,
   getProducts,
   updateProductDetails,
   updateProductPrices,
@@ -35,6 +28,7 @@ import { AsyncButton } from "@/components/ui/AsyncButton";
 import styles from "./page.module.css";
 
 type ProductModalMode = "create" | "edit" | null;
+type ProductFilter = "all" | "needs-stock" | "hidden";
 
 function formatRwf(value: number) {
   return `Rwf ${Number(value || 0).toLocaleString("en-US")}`;
@@ -47,13 +41,36 @@ function hasPermission(user: AuthUser | null, permission: string) {
   return user.permissions.includes(permission);
 }
 
+function productDetails(product: Product) {
+  return [product.categoryName, product.brand, product.model]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function productStatus(product: Product) {
+  if (!product.isActive) {
+    return { label: "Hidden", tone: styles.statusMuted };
+  }
+
+  if (product.currentStock <= 0) {
+    return { label: "Out of stock", tone: styles.statusDanger };
+  }
+
+  if (product.currentStock <= product.lowStockAlert) {
+    return { label: "Low stock", tone: styles.statusWarning };
+  }
+
+  return { label: "In stock", tone: styles.statusSuccess };
+}
+
 export default function ProductsPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<ProductFilter>("all");
   const [message, setMessage] = useState("");
-  const [visibleProductsCount, setVisibleProductsCount] = useState(5);
+  const [formError, setFormError] = useState("");
+  const [visibleProductsCount, setVisibleProductsCount] = useState(10);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,80 +79,91 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const [name, setName] = useState("");
-  const [sku, setSku] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
-  const [description, setDescription] = useState("");
-  const [buyingPriceRwf, setBuyingPriceRwf] = useState("0");
-  const [sellingPriceRwf, setSellingPriceRwf] = useState("0");
-  const [minSellingPriceRwf, setMinSellingPriceRwf] = useState("0");
+  const [sellingPriceRwf, setSellingPriceRwf] = useState("");
+  const [minSellingPriceRwf, setMinSellingPriceRwf] = useState("");
   const [lowStockAlert, setLowStockAlert] = useState("1");
-  const [warrantyText, setWarrantyText] = useState("");
-  const [priceReason, setPriceReason] = useState("Owner product update");
 
   const canCreate = hasPermission(user, "products.create");
   const canEdit = hasPermission(user, "products.update");
   const canUpdatePrice = hasPermission(user, "products.updatePrice");
-  const isOwner = user?.role === "owner";
-  const canEditPrices = isOwner || canUpdatePrice;
+  const canEditPrices = user?.role === "owner" || canUpdatePrice;
 
-  const activeProducts = useMemo(
-    () => products.filter((product) => product.isActive),
-    [products],
-  );
-
-  const lowStockProducts = useMemo(
+  const needsStockCount = useMemo(
     () =>
       products.filter(
         (product) =>
           product.isActive && product.currentStock <= product.lowStockAlert,
-      ),
+      ).length,
+    [products],
+  );
+
+  const hiddenCount = useMemo(
+    () => products.filter((product) => !product.isActive).length,
     [products],
   );
 
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    if (!term) return products;
+    return products
+      .filter((product) => {
+        if (filter === "needs-stock") {
+          return product.isActive && product.currentStock <= product.lowStockAlert;
+        }
 
-    return products.filter((product) => {
-      return (
-        product.name.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term) ||
-        (product.brand || "").toLowerCase().includes(term) ||
-        (product.model || "").toLowerCase().includes(term) ||
-        (product.categoryName || "").toLowerCase().includes(term)
-      );
-    });
-  }, [products, search]);
+        if (filter === "hidden") {
+          return !product.isActive;
+        }
 
-  const priorityProducts = useMemo(() => {
-    return [...filteredProducts].sort((a, b) => {
-      const aLow = a.isActive && a.currentStock <= a.lowStockAlert;
-      const bLow = b.isActive && b.currentStock <= b.lowStockAlert;
+        return true;
+      })
+      .filter((product) => {
+        if (!term) return true;
 
-      if (aLow && !bLow) return -1;
-      if (!aLow && bLow) return 1;
-      if (a.isActive && !b.isActive) return -1;
-      if (!a.isActive && b.isActive) return 1;
+        return (
+          product.name.toLowerCase().includes(term) ||
+          product.sku.toLowerCase().includes(term) ||
+          (product.brand || "").toLowerCase().includes(term) ||
+          (product.model || "").toLowerCase().includes(term) ||
+          (product.categoryName || "").toLowerCase().includes(term)
+        );
+      })
+      .sort((a, b) => {
+        const aPriority = !a.isActive
+          ? 3
+          : a.currentStock <= 0
+            ? 0
+            : a.currentStock <= a.lowStockAlert
+              ? 1
+              : 2;
+        const bPriority = !b.isActive
+          ? 3
+          : b.currentStock <= 0
+            ? 0
+            : b.currentStock <= b.lowStockAlert
+              ? 1
+              : 2;
 
-      return a.name.localeCompare(b.name);
-    });
-  }, [filteredProducts]);
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        return a.name.localeCompare(b.name);
+      });
+  }, [filter, products, search]);
 
   const visibleProducts = useMemo(
-    () => priorityProducts.slice(0, visibleProductsCount),
-    [priorityProducts, visibleProductsCount],
+    () => filteredProducts.slice(0, visibleProductsCount),
+    [filteredProducts, visibleProductsCount],
   );
 
-  const hasMoreProducts = visibleProductsCount < priorityProducts.length;
+  const hasMoreProducts = visibleProductsCount < filteredProducts.length;
 
   useEffect(() => {
-    loadData("");
+    loadData();
   }, []);
 
-  async function loadData(nextSearch = search) {
+  async function loadData() {
     const token = getToken();
     if (!token) return;
 
@@ -143,17 +171,14 @@ export default function ProductsPage() {
     setMessage("");
 
     try {
-      const [meResponse, productsResponse, categoriesResponse] =
-        await Promise.all([
-          getCurrentUser(token),
-          getProducts(token, nextSearch),
-          getProductCategories(token),
-        ]);
+      const [meResponse, productsResponse] = await Promise.all([
+        getCurrentUser(token),
+        getProducts(token),
+      ]);
 
       setUser(meResponse.user);
       setProducts(productsResponse.products);
-      setCategories(categoriesResponse.categories);
-      setVisibleProductsCount(5);
+      setVisibleProductsCount(10);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load products.",
@@ -165,17 +190,13 @@ export default function ProductsPage() {
 
   function resetForm() {
     setName("");
-    setSku("");
     setCategoryName("");
     setBrand("");
     setModel("");
-    setDescription("");
-    setBuyingPriceRwf("0");
-    setSellingPriceRwf("0");
-    setMinSellingPriceRwf("0");
+    setSellingPriceRwf("");
+    setMinSellingPriceRwf("");
     setLowStockAlert("1");
-    setWarrantyText("");
-    setPriceReason("Owner product update");
+    setFormError("");
   }
 
   function openCreateModal() {
@@ -187,17 +208,15 @@ export default function ProductsPage() {
   function openEditModal(product: Product) {
     setSelectedProduct(product);
     setName(product.name);
-    setSku(product.sku);
     setCategoryName(product.categoryName || "");
     setBrand(product.brand || "");
     setModel(product.model || "");
-    setDescription(product.description || "");
-    setBuyingPriceRwf(String(product.buyingPriceRwf));
     setSellingPriceRwf(String(product.sellingPriceRwf));
-    setMinSellingPriceRwf(String(product.minSellingPriceRwf));
+    setMinSellingPriceRwf(
+      product.minSellingPriceRwf > 0 ? String(product.minSellingPriceRwf) : "",
+    );
     setLowStockAlert(String(product.lowStockAlert));
-    setWarrantyText(product.warrantyText || "");
-    setPriceReason("Owner product update");
+    setFormError("");
     setModalMode("edit");
   }
 
@@ -208,9 +227,27 @@ export default function ProductsPage() {
     resetForm();
   }
 
-  async function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setVisibleProductsCount(5);
+  function validateProductForm() {
+    const sellingPrice = Number(sellingPriceRwf || 0);
+    const minimumPrice = Number(minSellingPriceRwf || 0);
+    const shouldValidatePrices = modalMode === "create" || canEditPrices;
+
+    if (!name.trim()) return "Enter the product name.";
+    if (!categoryName.trim()) return "Enter the product category.";
+    if (shouldValidatePrices && sellingPrice <= 0) {
+      return "Selling price must be greater than zero.";
+    }
+    if (shouldValidatePrices && minimumPrice < 0) {
+      return "Lowest allowed price cannot be negative.";
+    }
+    if (shouldValidatePrices && minimumPrice > sellingPrice) {
+      return "Lowest allowed price cannot be higher than the selling price.";
+    }
+    if (Number(lowStockAlert || 0) < 0) {
+      return "Low-stock alert cannot be negative.";
+    }
+
+    return "";
   }
 
   async function handleCreateProduct(event: FormEvent<HTMLFormElement>) {
@@ -219,31 +256,35 @@ export default function ProductsPage() {
     const token = getToken();
     if (!token) return;
 
+    const validationMessage = validateProductForm();
+    if (validationMessage) {
+      setFormError(validationMessage);
+      return;
+    }
+
     setSaving(true);
+    setFormError("");
     setMessage("");
 
     try {
       await createProduct(token, {
-        name,
-        sku: sku || undefined,
-        categoryName,
-        brand,
-        model,
-        description,
-        buyingPriceRwf: Number(buyingPriceRwf || 0),
-        sellingPriceRwf: Number(sellingPriceRwf || 0),
+        name: name.trim(),
+        categoryName: categoryName.trim(),
+        brand: brand.trim() || undefined,
+        model: model.trim() || undefined,
+        sellingPriceRwf: Number(sellingPriceRwf),
         minSellingPriceRwf: Number(minSellingPriceRwf || 0),
         lowStockAlert: Number(lowStockAlert || 1),
-        warrantyText,
       });
 
       closeModal();
       setSearch("");
-      await loadData("");
-      setMessage("Product created successfully.");
+      setFilter("all");
+      await loadData();
+      setMessage("Product added successfully.");
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Could not create product.",
+      setFormError(
+        error instanceof Error ? error.message : "Could not add product.",
       );
     } finally {
       setSaving(false);
@@ -256,34 +297,46 @@ export default function ProductsPage() {
     const token = getToken();
     if (!token || !selectedProduct) return;
 
+    const validationMessage = validateProductForm();
+    if (validationMessage) {
+      setFormError(validationMessage);
+      return;
+    }
+
     setSaving(true);
+    setFormError("");
     setMessage("");
 
     try {
       await updateProductDetails(token, selectedProduct.id, {
-        name,
-        categoryName,
-        brand,
-        model,
-        description,
+        name: name.trim(),
+        categoryName: categoryName.trim(),
+        brand: brand.trim(),
+        model: model.trim(),
         lowStockAlert: Number(lowStockAlert || 1),
-        warrantyText,
       });
 
       if (canEditPrices) {
-        await updateProductPrices(token, selectedProduct.id, {
-          buyingPriceRwf: Number(buyingPriceRwf || 0),
-          sellingPriceRwf: Number(sellingPriceRwf || 0),
-          minSellingPriceRwf: Number(minSellingPriceRwf || 0),
-          reason: priceReason || "Owner product update",
-        });
+        const nextSellingPrice = Number(sellingPriceRwf);
+        const nextMinimumPrice = Number(minSellingPriceRwf || 0);
+        const priceChanged =
+          nextSellingPrice !== selectedProduct.sellingPriceRwf ||
+          nextMinimumPrice !== selectedProduct.minSellingPriceRwf;
+
+        if (priceChanged) {
+          await updateProductPrices(token, selectedProduct.id, {
+            sellingPriceRwf: nextSellingPrice,
+            minSellingPriceRwf: nextMinimumPrice,
+            reason: "Product pricing updated",
+          });
+        }
       }
 
       closeModal();
-      await loadData(search);
+      await loadData();
       setMessage("Product updated successfully.");
     } catch (error) {
-      setMessage(
+      setFormError(
         error instanceof Error ? error.message : "Could not update product.",
       );
     } finally {
@@ -299,8 +352,8 @@ export default function ProductsPage() {
 
     try {
       await deactivateProduct(token, product.id);
-      await loadData(search);
-      setMessage("Product hidden.");
+      await loadData();
+      setMessage(`${product.name} is now hidden from selling.`);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not hide product.",
@@ -316,8 +369,8 @@ export default function ProductsPage() {
 
     try {
       await activateProduct(token, product.id);
-      await loadData(search);
-      setMessage("Product shown.");
+      await loadData();
+      setMessage(`${product.name} is available for selling again.`);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not show product.",
@@ -327,269 +380,254 @@ export default function ProductsPage() {
 
   return (
     <AppShell title="Products">
-      <div className={styles.productsPage}>
-        <section className={styles.ownerHero}>
-          <div>
-            <span className={styles.kicker}>
-              <Package size={15} />
-              Products
-            </span>
-
-            <h1>Product List</h1>
-
+      <main className={styles.productsPage}>
+        <section className={styles.commandBar}>
+          <div className={styles.commandCopy}>
+            <div className={styles.commandTitleRow}>
+              <h1>Product catalog</h1>
+            </div>
             <p>
-              Search products, edit details, update prices, and hide products
-              that should not be sold.
+              Keep product details and selling rules clean. Quantity and purchase
+              cost are handled in Stock.
             </p>
           </div>
 
-          <div className={styles.heroActions}>
+          {canCreate ? (
             <button
-              className="btn btn-outline"
+              className="btn btn-primary"
               type="button"
-              onClick={() => loadData(search)}
+              onClick={openCreateModal}
             >
-              <RefreshCw size={14} />
-              Refresh
+              <Plus size={15} />
+              Add product
             </button>
-
-            {canCreate ? (
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={openCreateModal}
-              >
-                <Plus size={14} />
-                Add Product
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </section>
-
-        <section
-          className={
-            lowStockProducts.length > 0
-              ? styles.actionCardWarning
-              : styles.actionCardClean
-          }
-        >
-          <div className={styles.actionIcon}>
-            {lowStockProducts.length > 0 ? (
-              <AlertTriangle size={22} />
-            ) : (
-              <CheckCircle2 size={22} />
-            )}
-          </div>
-
-          <div>
-            <strong>
-              {lowStockProducts.length > 0
-                ? "Restock low products first."
-                : "Product records look clean."}
-            </strong>
-            <span>
-              {lowStockProducts.length > 0
-                ? `${lowStockProducts.length} product(s) are at or below alert quantity.`
-                : "No urgent product action needed right now."}
-            </span>
-          </div>
-        </section>
-
-        <div className={styles.summaryStrip}>
-          <SummaryMini label="Products" value={String(products.length)} />
-          <SummaryMini label="Active" value={String(activeProducts.length)} />
-          <SummaryMini
-            label="Low stock"
-            value={String(lowStockProducts.length)}
-            danger={lowStockProducts.length > 0}
-          />
-        </div>
 
         {message ? <div className={styles.messageBox}>{message}</div> : null}
 
-        <section className={styles.listingPanel}>
-          <div className={styles.listingTop}>
-            <div>
-              <h2>Products</h2>
-              <p>Showing the most important products first.</p>
-            </div>
-
-            {loading ? (
-              <Loader2
-                className="spin"
-                size={20}
-                style={{ color: "var(--orange)" }}
-              />
-            ) : (
-              <span className="badge badge-blue">
-                {filteredProducts.length} record(s)
-              </span>
-            )}
-          </div>
-
+        <section className={styles.catalogPanel}>
           <div className={styles.toolbar}>
-            <form onSubmit={handleSearch} className={styles.searchForm}>
-              <div className={styles.searchBox}>
-                <Search size={15} />
-                <input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setVisibleProductsCount(5);
-                  }}
-                  placeholder="Search product, SKU, brand..."
-                />
-              </div>
+            <label className={styles.searchBox}>
+              <Search size={17} />
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setVisibleProductsCount(10);
+                }}
+                placeholder="Search product, category, brand or model"
+                aria-label="Search products"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  className={styles.clearSearch}
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              ) : null}
+            </label>
 
-              <button className="btn btn-outline" type="submit">
-                Search
-              </button>
-
+            <div className={styles.filters} aria-label="Product filters">
               <button
-                className="btn btn-outline"
                 type="button"
+                className={filter === "all" ? styles.filterActive : ""}
                 onClick={() => {
-                  setSearch("");
-                  setVisibleProductsCount(5);
+                  setFilter("all");
+                  setVisibleProductsCount(10);
                 }}
               >
-                Clear
+                All <span>{products.length}</span>
               </button>
-            </form>
+              <button
+                type="button"
+                className={filter === "needs-stock" ? styles.filterActive : ""}
+                onClick={() => {
+                  setFilter("needs-stock");
+                  setVisibleProductsCount(10);
+                }}
+              >
+                Needs stock <span>{needsStockCount}</span>
+              </button>
+              <button
+                type="button"
+                className={filter === "hidden" ? styles.filterActive : ""}
+                onClick={() => {
+                  setFilter("hidden");
+                  setVisibleProductsCount(10);
+                }}
+              >
+                Hidden <span>{hiddenCount}</span>
+              </button>
+            </div>
           </div>
 
-          <div className={styles.productList}>
-            <div className={styles.productHeader}>
-              <span>Product</span>
-              <span>Price</span>
-              <span>Stock</span>
-              <span>Status</span>
-              <span>Action</span>
+          <div className={styles.listMeta}>
+            <span>
+              {filteredProducts.length === products.length && !search
+                ? `${products.length} products`
+                : `${filteredProducts.length} matching products`}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className={styles.loadingState}>
+              <Loader2 className="spin" size={22} />
+              Loading products...
             </div>
+          ) : (
+            <div className={styles.productList}>
+              <div className={styles.productHeader}>
+                <span>Product</span>
+                <span>Selling price</span>
+                <span>Stock</span>
+                <span>Status</span>
+                <span>Actions</span>
+              </div>
 
-            {visibleProducts.map((product) => {
-              const isLowStock =
-                product.isActive &&
-                product.currentStock <= product.lowStockAlert;
+              {visibleProducts.map((product) => {
+                const status = productStatus(product);
+                const details = productDetails(product);
 
-              return (
-                <article key={product.id} className={styles.productRow}>
-                  <div className={styles.productMain}>
-                    <div className={styles.avatarIcon}>
-                      <Package size={17} />
+                return (
+                  <article key={product.id} className={styles.productRow}>
+                    <div className={styles.productMain}>
+                      <div className={styles.productIdentity}>
+                        <strong>{product.name}</strong>
+                        <span>{details || "Uncategorized"}</span>
+                      </div>
                     </div>
 
-                    <div>
-                      <strong>{product.name}</strong>
-                      <span>
-                        {product.sku} · {product.categoryName || "No category"}
+                    <div className={styles.priceCell}>
+                      <strong>{formatRwf(product.sellingPriceRwf)}</strong>
+                      {product.minSellingPriceRwf > 0 ? (
+                        <span>
+                          Lowest {formatRwf(product.minSellingPriceRwf)}
+                        </span>
+                      ) : (
+                        <span>No price floor</span>
+                      )}
+                    </div>
+
+                    <div className={styles.stockCell}>
+                      <strong
+                        className={
+                          product.isActive &&
+                          product.currentStock <= product.lowStockAlert
+                            ? styles.stockAttention
+                            : ""
+                        }
+                      >
+                        {product.currentStock}
+                      </strong>
+                      <span>Alert at {product.lowStockAlert}</span>
+                    </div>
+
+                    <div className={styles.statusCell}>
+                      <span className={`${styles.statusBadge} ${status.tone}`}>
+                        {status.label}
                       </span>
                     </div>
-                  </div>
 
-                  <div className={styles.productFacts}>
-                    <Fact
-                      label="Price"
-                      value={formatRwf(product.sellingPriceRwf)}
-                    />
-                    <Fact
-                      label="Stock"
-                      value={String(product.currentStock)}
-                      danger={isLowStock}
-                    />
-                    <Fact
-                      label="Status"
-                      value={product.isActive ? "Active" : "Hidden"}
-                      danger={!product.isActive}
-                    />
-                  </div>
-
-                  <div className={styles.rowActions}>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(product)}
-                      >
-                        <Pencil size={14} />
-                        Edit
-                      </button>
-                    ) : null}
-
-                    {canEdit ? (
-                      product.isActive ? (
+                    <div className={styles.rowActions}>
+                      {canEdit ? (
                         <button
                           type="button"
-                          className={styles.dangerButton}
-                          onClick={() => handleDeactivate(product)}
+                          onClick={() => openEditModal(product)}
                         >
-                          <PowerOff size={14} />
-                          Hide
+                          <Pencil size={14} />
+                          Edit
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.successButton}
-                          onClick={() => handleActivate(product)}
-                        >
-                          <Power size={14} />
-                          Show
-                        </button>
-                      )
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
+                      ) : null}
 
-            {filteredProducts.length === 0 ? (
-              <EmptyCard
-                icon={<Package size={22} />}
-                title="No products found"
-                text="Create a product or search another name, SKU, or brand."
-              />
-            ) : null}
-          </div>
+                      {canEdit ? (
+                        product.isActive ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeactivate(product)}
+                          >
+                            <PowerOff size={14} />
+                            Hide
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.successButton}
+                            onClick={() => handleActivate(product)}
+                          >
+                            <Power size={14} />
+                            Show
+                          </button>
+                        )
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+
+              {filteredProducts.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Package size={22} />
+                  <strong>
+                    {products.length === 0
+                      ? "No products yet"
+                      : "No matching products"}
+                  </strong>
+                  <span>
+                    {products.length === 0
+                      ? "Add the first product to start building the catalog."
+                      : "Try another search or product filter."}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {hasMoreProducts ? (
             <button
               className={styles.loadMoreButton}
               type="button"
-              onClick={() => setVisibleProductsCount((current) => current + 5)}
+              onClick={() =>
+                setVisibleProductsCount((current) => current + 10)
+              }
             >
-              Show 5 more products
+              Show 10 more
             </button>
           ) : null}
         </section>
 
         {modalMode ? (
           <div className="staff-modal-backdrop">
-            <div className="staff-modal">
+            <div className={`staff-modal ${styles.productModal}`}>
               <div className="staff-modal-header">
-                <div>
+                <div className={styles.modalHeading}>
                   <div className="staff-modal-icon">
                     {modalMode === "edit" ? (
-                      <Pencil size={22} />
+                      <Pencil size={21} />
                     ) : (
-                      <Package size={22} />
+                      <Package size={21} />
                     )}
                   </div>
-
-                  <h2>
-                    {modalMode === "create"
-                      ? "Add new product"
-                      : "Edit product"}
-                  </h2>
-                  <p>
-                    {modalMode === "create"
-                      ? "Create the product profile. Stock is added from Stock Control."
-                      : "Update product details and prices."}
-                  </p>
+                  <div>
+                    <h2>
+                      {modalMode === "create" ? "Add product" : "Edit product"}
+                    </h2>
+                    <p>
+                      {modalMode === "create"
+                        ? "Add only the information needed to identify and sell this product."
+                        : "Keep product details and selling rules accurate."}
+                    </p>
+                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={closeModal}
                   className="staff-modal-close"
+                  aria-label="Close"
                 >
                   <X size={18} />
                 </button>
@@ -601,288 +639,190 @@ export default function ProductsPage() {
                     ? handleCreateProduct
                     : handleUpdateProduct
                 }
-                className="staff-modal-body"
+                className={`staff-modal-body ${styles.productForm}`}
               >
+                {formError ? (
+                  <div className={styles.formError}>{formError}</div>
+                ) : null}
+
                 <ProductForm
                   mode={modalMode}
                   name={name}
-                  sku={sku}
                   categoryName={categoryName}
                   brand={brand}
                   model={model}
-                  description={description}
-                  buyingPriceRwf={buyingPriceRwf}
                   sellingPriceRwf={sellingPriceRwf}
                   minSellingPriceRwf={minSellingPriceRwf}
                   lowStockAlert={lowStockAlert}
-                  warrantyText={warrantyText}
-                  priceReason={priceReason}
-                  categories={categories}
                   canEditPrices={modalMode === "create" || canEditPrices}
                   setName={setName}
-                  setSku={setSku}
                   setCategoryName={setCategoryName}
                   setBrand={setBrand}
                   setModel={setModel}
-                  setDescription={setDescription}
-                  setBuyingPriceRwf={setBuyingPriceRwf}
                   setSellingPriceRwf={setSellingPriceRwf}
                   setMinSellingPriceRwf={setMinSellingPriceRwf}
                   setLowStockAlert={setLowStockAlert}
-                  setWarrantyText={setWarrantyText}
-                  setPriceReason={setPriceReason}
                 />
 
                 <ModalFooter
                   onCancel={closeModal}
                   saving={saving}
-                  label={
-                    modalMode === "create" ? "Create product" : "Save product"
-                  }
+                  label={modalMode === "create" ? "Add product" : "Save changes"}
                 />
               </form>
             </div>
           </div>
         ) : null}
-      </div>
+      </main>
     </AppShell>
-  );
-}
-
-function SummaryMini({
-  label,
-  value,
-  danger = false,
-}: {
-  label: string;
-  value: string;
-  danger?: boolean;
-}) {
-  return (
-    <div className={styles.summaryMini}>
-      <span>{label}</span>
-      <strong className={danger ? styles.warningValue : ""}>{value}</strong>
-    </div>
-  );
-}
-
-function Fact({
-  label,
-  value,
-  danger = false,
-}: {
-  label: string;
-  value: string;
-  danger?: boolean;
-}) {
-  return (
-    <div className={styles.fact}>
-      <span>{label}</span>
-      <strong className={danger ? styles.warningValue : ""}>{value}</strong>
-    </div>
   );
 }
 
 type ProductFormProps = {
   mode: "create" | "edit";
   name: string;
-  sku: string;
   categoryName: string;
   brand: string;
   model: string;
-  description: string;
-  buyingPriceRwf: string;
   sellingPriceRwf: string;
   minSellingPriceRwf: string;
   lowStockAlert: string;
-  warrantyText: string;
-  priceReason: string;
-  categories: ProductCategory[];
   canEditPrices: boolean;
   setName: (value: string) => void;
-  setSku: (value: string) => void;
   setCategoryName: (value: string) => void;
   setBrand: (value: string) => void;
   setModel: (value: string) => void;
-  setDescription: (value: string) => void;
-  setBuyingPriceRwf: (value: string) => void;
   setSellingPriceRwf: (value: string) => void;
   setMinSellingPriceRwf: (value: string) => void;
   setLowStockAlert: (value: string) => void;
-  setWarrantyText: (value: string) => void;
-  setPriceReason: (value: string) => void;
 };
 
 function ProductForm({
   mode,
   name,
-  sku,
   categoryName,
   brand,
   model,
-  description,
-  buyingPriceRwf,
   sellingPriceRwf,
   minSellingPriceRwf,
   lowStockAlert,
-  warrantyText,
-  priceReason,
-  categories,
   canEditPrices,
   setName,
-  setSku,
   setCategoryName,
   setBrand,
   setModel,
-  setDescription,
-  setBuyingPriceRwf,
   setSellingPriceRwf,
   setMinSellingPriceRwf,
   setLowStockAlert,
-  setWarrantyText,
-  setPriceReason,
 }: ProductFormProps) {
   return (
     <>
       <section className={styles.formSection}>
-        <div className="staff-form-section-title">Product details</div>
+        <div className={styles.sectionHeading}>
+          <strong>Product information</strong>
+          <span>Basic details used when searching and selling.</span>
+        </div>
 
-        <div className="staff-form-grid">
-          <label className="staff-form-group">
-            <span>Product name</span>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>
+            <span>Product name *</span>
             <input
+              className={styles.productInput}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Example: Oraimo 20W Type-C Fast Charger"
+              autoFocus={mode === "create"}
               required
             />
           </label>
 
-          <label className="staff-form-group">
-            <span>SKU</span>
+          <label className={styles.field}>
+            <span>Category *</span>
             <input
-              value={sku}
-              onChange={(event) => setSku(event.target.value)}
-              placeholder={
-                mode === "create"
-                  ? "Leave empty to auto-generate"
-                  : "SKU shown for reference"
-              }
-              readOnly={mode === "edit"}
-            />
-          </label>
-
-          <label className="staff-form-group">
-            <span>Category</span>
-            <input
+              className={styles.productInput}
               value={categoryName}
               onChange={(event) => setCategoryName(event.target.value)}
-              list="product-categories"
-              placeholder="Example: Chargers"
+              placeholder="Type a category, e.g. Chargers"
+              required
             />
-            <datalist id="product-categories">
-              {categories.map((category) => (
-                <option key={category.id} value={category.name} />
-              ))}
-            </datalist>
           </label>
 
-          <label className="staff-form-group">
-            <span>Brand</span>
+          <label className={styles.field}>
+            <span>Brand <em>Optional</em></span>
             <input
+              className={styles.productInput}
               value={brand}
               onChange={(event) => setBrand(event.target.value)}
               placeholder="Example: Oraimo"
             />
           </label>
 
-          <label className="staff-form-group">
-            <span>Model</span>
+          <label className={styles.field}>
+            <span>Model <em>Optional</em></span>
             <input
+              className={styles.productInput}
               value={model}
               onChange={(event) => setModel(event.target.value)}
               placeholder="Example: OCW-20W"
             />
           </label>
+        </div>
+      </section>
 
-          <label className="staff-form-group">
-            <span>Low stock alert</span>
+      <section className={styles.formSection}>
+        <div className={styles.sectionHeading}>
+          <strong>Selling & stock alerts</strong>
+          <span>Set the selling price and choose when low stock should be flagged.</span>
+        </div>
+
+        <div className={styles.formGridThree}>
+          {canEditPrices ? (
+            <label className={styles.field}>
+              <span>Selling price (Rwf) *</span>
+              <input
+                className={styles.productInput}
+                type="number"
+                inputMode="numeric"
+                value={sellingPriceRwf}
+                onChange={(event) => setSellingPriceRwf(event.target.value)}
+                min={1}
+                placeholder="Enter selling price"
+                required
+              />
+            </label>
+          ) : null}
+
+          {canEditPrices ? (
+            <label className={styles.field}>
+              <span>Lowest allowed price <em>Optional</em></span>
+              <input
+                className={styles.productInput}
+                type="number"
+                inputMode="numeric"
+                value={minSellingPriceRwf}
+                onChange={(event) => setMinSellingPriceRwf(event.target.value)}
+                min={0}
+                placeholder="No price floor"
+              />
+              <small>Sales below this amount require approval.</small>
+            </label>
+          ) : null}
+
+          <label className={styles.field}>
+            <span>Low-stock alert quantity</span>
             <input
+              className={styles.productInput}
               type="number"
+              inputMode="numeric"
               value={lowStockAlert}
               onChange={(event) => setLowStockAlert(event.target.value)}
               min={0}
             />
+            <small>Warn when stock reaches this quantity.</small>
           </label>
         </div>
-
-        <label className="staff-form-group">
-          <span>Description</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Short product description"
-          />
-        </label>
-
-        <label className="staff-form-group">
-          <span>Warranty</span>
-          <input
-            value={warrantyText}
-            onChange={(event) => setWarrantyText(event.target.value)}
-            placeholder="Example: 1 month warranty"
-          />
-        </label>
       </section>
 
-      {canEditPrices ? (
-        <section className={styles.formSection}>
-          <div className="staff-form-section-title">Prices</div>
-
-          <div className="staff-form-grid">
-            <label className="staff-form-group">
-              <span>Buying price</span>
-              <input
-                type="number"
-                value={buyingPriceRwf}
-                onChange={(event) => setBuyingPriceRwf(event.target.value)}
-                min={0}
-              />
-            </label>
-
-            <label className="staff-form-group">
-              <span>Selling price</span>
-              <input
-                type="number"
-                value={sellingPriceRwf}
-                onChange={(event) => setSellingPriceRwf(event.target.value)}
-                min={0}
-              />
-            </label>
-
-            <label className="staff-form-group">
-              <span>Minimum selling price</span>
-              <input
-                type="number"
-                value={minSellingPriceRwf}
-                onChange={(event) => setMinSellingPriceRwf(event.target.value)}
-                min={0}
-              />
-            </label>
-
-            {mode === "edit" ? (
-              <label className="staff-form-group">
-                <span>Reason</span>
-                <input
-                  value={priceReason}
-                  onChange={(event) => setPriceReason(event.target.value)}
-                  placeholder="Example: Market price update"
-                />
-              </label>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
     </>
   );
 }
@@ -905,25 +845,8 @@ function ModalFooter({ onCancel, saving, label }: ModalFooterProps) {
       </button>
 
       <AsyncButton loading={saving} type="submit">
-        <Plus size={15} />
         {label}
       </AsyncButton>
-    </div>
-  );
-}
-
-type EmptyCardProps = {
-  icon: ReactNode;
-  title: string;
-  text: string;
-};
-
-function EmptyCard({ icon, title, text }: EmptyCardProps) {
-  return (
-    <div className={styles.emptyCard}>
-      <div>{icon}</div>
-      <strong>{title}</strong>
-      <span>{text}</span>
     </div>
   );
 }

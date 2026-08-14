@@ -7,7 +7,7 @@ export type Product = {
   brand: string | null;
   model: string | null;
   description: string | null;
-  buyingPriceRwf: number;
+  buyingPriceRwf?: number;
   sellingPriceRwf: number;
   minSellingPriceRwf: number;
   currentStock: number;
@@ -31,16 +31,12 @@ export type ProductCategory = {
 
 export type ProductInput = {
   name: string;
-  sku?: string;
-  categoryName?: string;
+  categoryName: string;
   brand?: string;
   model?: string;
-  description?: string;
-  buyingPriceRwf: number;
   sellingPriceRwf: number;
-  minSellingPriceRwf: number;
-  lowStockAlert: number;
-  warrantyText?: string;
+  minSellingPriceRwf?: number;
+  lowStockAlert?: number;
 };
 
 export type ProductDetailsUpdateInput = {
