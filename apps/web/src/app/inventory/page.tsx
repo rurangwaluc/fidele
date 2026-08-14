@@ -8,7 +8,7 @@ import {
   Loader2,
   Package,
   Plus,
-  RefreshCw,
+  History,
   Search,
   Trash2,
   Truck,
@@ -20,12 +20,9 @@ import { Product, getProducts } from "@/lib/products";
 import {
   StockArrival,
   StockArrivalItem,
-  StockMovement,
   createStockArrival,
-  getNextShipmentReference,
   getStockArrival,
   getStockArrivals,
-  getStockMovements,
 } from "@/lib/inventory";
 import { useEffect, useMemo, useState } from "react";
 
@@ -36,10 +33,10 @@ import styles from "./page.module.css";
 type ArrivalItemForm = {
   rowId: string;
   productId: string;
+  productSearch: string;
   quantityReceived: string;
   damagedQuantity: string;
   unitCostRwf: string;
-  note: string;
 };
 
 type DetailsModalData = {
@@ -80,10 +77,10 @@ function makeRow(): ArrivalItemForm {
   return {
     rowId: crypto.randomUUID(),
     productId: "",
+    productSearch: "",
     quantityReceived: "1",
     damagedQuantity: "0",
-    unitCostRwf: "0",
-    note: "",
+    unitCostRwf: "",
   };
 }
 
@@ -95,15 +92,17 @@ export default function InventoryPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [arrivals, setArrivals] = useState<StockArrival[]>([]);
-  const [movements, setMovements] = useState<StockMovement[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const [listSearch, setListSearch] = useState("");
-  const [visibleArrivalsCount, setVisibleArrivalsCount] = useState(8);
-  const [visibleMovementsCount, setVisibleMovementsCount] = useState(8);
+  const [stockSearch, setStockSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "needs">("all");
+  const [visibleStockCount, setVisibleStockCount] = useState(14);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const [arrivalModalOpen, setArrivalModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -113,88 +112,66 @@ export default function InventoryPage() {
     items: [],
   });
 
-  const [sourceName, setSourceName] = useState("Dubai shipment");
-  const [shipmentReference, setShipmentReference] = useState("");
-  const [notes, setNotes] = useState("");
+  const [sourceName, setSourceName] = useState("");
   const [items, setItems] = useState<ArrivalItemForm[]>([makeRow()]);
 
   const canReceiveStock = hasPermission(user, "stock.receive");
+  const canSeeCost =
+    user?.role === "owner" || hasPermission(user, "products.updatePrice");
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.isActive),
     [products],
   );
 
-  const totalStockQuantity = useMemo(
-    () =>
-      products.reduce(
-        (sum, product) => sum + Number(product.currentStock || 0),
-        0,
-      ),
-    [products],
-  );
+  const stockSummary = useMemo(() => {
+    return activeProducts.reduce(
+      (summary, product) => {
+        const quantity = Number(product.currentStock || 0);
+        const lowStockAlert = Number(product.lowStockAlert || 0);
+        const purchaseCost = Number(product.buyingPriceRwf || 0);
 
-  const totalDamagedOnArrival = useMemo(
-    () =>
-      arrivals.reduce(
-        (sum, arrival) => sum + Number(arrival.totalDamagedQuantity || 0),
-        0,
-      ),
-    [arrivals],
-  );
+        if (quantity === 0) {
+          summary.outOfStock += 1;
+        } else if (quantity <= lowStockAlert) {
+          summary.lowStock += 1;
+        }
 
-  const totalArrivalCost = useMemo(
-    () =>
-      arrivals.reduce(
-        (sum, arrival) => sum + Number(arrival.totalCostRwf || 0),
-        0,
-      ),
-    [arrivals],
-  );
+        summary.stockValueRwf += quantity * purchaseCost;
+        return summary;
+      },
+      { stockValueRwf: 0, lowStock: 0, outOfStock: 0 },
+    );
+  }, [activeProducts]);
 
-  const filteredArrivals = useMemo(() => {
-    const term = listSearch.trim().toLowerCase();
+  const filteredProducts = useMemo(() => {
+    const term = stockSearch.trim().toLowerCase();
 
-    if (!term) return arrivals;
+    return activeProducts.filter((product) => {
+      const needsStock =
+        product.currentStock === 0 || product.currentStock <= product.lowStockAlert;
 
-    return arrivals.filter((arrival) => {
-      return (
-        (arrival.shipmentReference || "").toLowerCase().includes(term) ||
-        (arrival.referenceCode || "").toLowerCase().includes(term) ||
-        (arrival.sourceName || "").toLowerCase().includes(term) ||
-        (arrival.receivedByName || "").toLowerCase().includes(term)
-      );
+      if (stockFilter === "needs" && !needsStock) return false;
+      if (!term) return true;
+
+      return [product.name, product.categoryName, product.brand, product.model]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
     });
-  }, [arrivals, listSearch]);
+  }, [activeProducts, stockFilter, stockSearch]);
 
-  const filteredMovements = useMemo(() => {
-    const term = listSearch.trim().toLowerCase();
-
-    if (!term) return movements;
-
-    return movements.filter((movement) => {
-      return (
-        (movement.productName || "").toLowerCase().includes(term) ||
-        (movement.reason || "").toLowerCase().includes(term) ||
-        (movement.movementType || "").toLowerCase().includes(term) ||
-        (movement.actorName || "").toLowerCase().includes(term)
-      );
-    });
-  }, [listSearch, movements]);
-
-  const visibleArrivals = useMemo(
-    () => filteredArrivals.slice(0, visibleArrivalsCount),
-    [filteredArrivals, visibleArrivalsCount],
-  );
-
-  const visibleMovements = useMemo(
-    () => filteredMovements.slice(0, visibleMovementsCount),
-    [filteredMovements, visibleMovementsCount],
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleStockCount),
+    [filteredProducts, visibleStockCount],
   );
 
   const arrivalFormTotals = useMemo(() => {
     return items.reduce(
       (totals, item) => {
+        if (!item.productId) return totals;
+
         const quantityReceived = Number(item.quantityReceived || 0);
         const damagedQuantity = Number(item.damagedQuantity || 0);
         const unitCost = Number(item.unitCostRwf || 0);
@@ -219,6 +196,11 @@ export default function InventoryPage() {
     );
   }, [items]);
 
+  const selectedProductCount = useMemo(
+    () => items.filter((item) => item.productId).length,
+    [items],
+  );
+
   useEffect(() => {
     loadData();
   }, []);
@@ -231,24 +213,14 @@ export default function InventoryPage() {
     setMessage("");
 
     try {
-      const [
-        meResponse,
-        productsResponse,
-        arrivalsResponse,
-        movementsResponse,
-      ] = await Promise.all([
+      const [meResponse, productsResponse] = await Promise.all([
         getCurrentUser(token),
         getProducts(token),
-        getStockArrivals(token),
-        getStockMovements(token),
       ]);
 
       setUser(meResponse.user);
       setProducts(productsResponse.products);
-      setArrivals(arrivalsResponse.arrivals);
-      setMovements(movementsResponse.movements);
-      setVisibleArrivalsCount(8);
-      setVisibleMovementsCount(8);
+      setVisibleStockCount(14);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not load inventory.",
@@ -259,26 +231,13 @@ export default function InventoryPage() {
   }
 
   function resetArrivalForm() {
-    setSourceName("Dubai shipment");
-    setShipmentReference("");
-    setNotes("");
+    setSourceName("");
     setItems([makeRow()]);
   }
 
-  async function openArrivalModal() {
-    const token = getToken();
-
+  function openArrivalModal() {
     resetArrivalForm();
     setArrivalModalOpen(true);
-
-    if (!token) return;
-
-    try {
-      const response = await getNextShipmentReference(token);
-      setShipmentReference(response.shipmentReference);
-    } catch {
-      setShipmentReference("");
-    }
   }
 
   function closeArrivalModal() {
@@ -299,6 +258,26 @@ export default function InventoryPage() {
               ...item,
               [key]: value,
             }
+          : item,
+      ),
+    );
+  }
+
+  function updateProductSearch(rowId: string, value: string) {
+    setItems((current) =>
+      current.map((item) =>
+        item.rowId === rowId
+          ? { ...item, productSearch: value, productId: "" }
+          : item,
+      ),
+    );
+  }
+
+  function chooseProduct(rowId: string, product: Product) {
+    setItems((current) =>
+      current.map((item) =>
+        item.rowId === rowId
+          ? { ...item, productId: product.id, productSearch: product.name }
           : item,
       ),
     );
@@ -327,7 +306,6 @@ export default function InventoryPage() {
       quantityReceived: Number(item.quantityReceived || 0),
       damagedQuantity: Number(item.damagedQuantity || 0),
       unitCostRwf: Number(item.unitCostRwf || 0),
-      note: item.note,
     }));
 
     const hasInvalidItem = cleanItems.some(
@@ -335,12 +313,13 @@ export default function InventoryPage() {
         !item.productId ||
         item.quantityReceived < 1 ||
         item.damagedQuantity < 0 ||
-        item.damagedQuantity > item.quantityReceived,
+        item.damagedQuantity > item.quantityReceived ||
+        item.unitCostRwf < 1,
     );
 
     if (hasInvalidItem) {
       setMessage(
-        "Please check received products. Damaged quantity cannot be higher than received quantity.",
+        "Choose each product and enter a valid quantity and purchase cost. Damaged quantity cannot be higher than received quantity.",
       );
       return;
     }
@@ -350,15 +329,14 @@ export default function InventoryPage() {
 
     try {
       await createStockArrival(token, {
-        sourceName,
-        shipmentReference,
-        notes,
+        sourceName: sourceName.trim() || undefined,
         items: cleanItems,
       });
 
       closeArrivalModal();
+      setHistoryLoaded(false);
       await loadData();
-      setMessage("Stock arrival recorded successfully.");
+      setMessage("Stock received successfully.");
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -367,6 +345,28 @@ export default function InventoryPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function openHistory() {
+    setHistoryOpen(true);
+    if (historyLoaded) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    setHistoryLoading(true);
+
+    try {
+      const response = await getStockArrivals(token);
+      setArrivals(response.arrivals);
+      setHistoryLoaded(true);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not load stock history.",
+      );
+    } finally {
+      setHistoryLoading(false);
     }
   }
 
@@ -402,35 +402,19 @@ export default function InventoryPage() {
     }
   }
 
-  const latestArrival = arrivals[0];
-  const latestMovement = movements[0];
-
   return (
     <AppShell title="Stock">
       <div className={styles.inventoryPage}>
-        <section className={styles.ownerHero}>
+        <section className={styles.stockHeader}>
           <div>
-            <span className={styles.kicker}>
-              <Truck size={15} />
-              Inventory
-            </span>
-
-            <h1>Stock Control</h1>
-
-            <p>
-              Receive stock, check damaged items, and see the latest stock
-              changes without confusion.
-            </p>
+            <h1>Stock</h1>
+            <p>See what is available, what needs attention, and receive new stock.</p>
           </div>
 
-          <div className={styles.heroActions}>
-            <button
-              className="btn btn-outline"
-              type="button"
-              onClick={loadData}
-            >
-              <RefreshCw size={14} />
-              Refresh
+          <div className={styles.headerActions}>
+            <button className="btn btn-outline" type="button" onClick={openHistory}>
+              <History size={14} />
+              Stock history
             </button>
 
             {canReceiveStock ? (
@@ -446,71 +430,32 @@ export default function InventoryPage() {
           </div>
         </section>
 
-        <section className={styles.actionCard}>
-          <div className={styles.actionIcon}>
-            {totalDamagedOnArrival > 0 ? (
-              <AlertTriangle size={22} />
-            ) : (
-              <CheckCircle2 size={22} />
-            )}
-          </div>
-
-          <div>
-            <strong>
-              {totalDamagedOnArrival > 0
-                ? "Check damaged stock before selling."
-                : "Stock records look clean."}
-            </strong>
-            <span>
-              {latestArrival
-                ? `Latest arrival: ${
-                    latestArrival.shipmentReference ||
-                    latestArrival.referenceCode
-                  } from ${latestArrival.sourceName || "unknown source"}.`
-                : "No stock arrival has been recorded yet."}
-            </span>
-          </div>
-        </section>
-
         <div className={styles.metricsGrid}>
           <MetricCard
             icon={<Boxes size={20} />}
-            label="Stock available"
-            value={String(totalStockQuantity)}
-            help="Sellable units currently in the shop"
-            badge="Now"
+            label="Stock value"
+            value={canSeeCost ? formatRwf(stockSummary.stockValueRwf) : "-"}
+            help="Current stock at purchase cost"
+            badge="Current"
             badgeClass="badge badge-blue"
-          />
-
-          <MetricCard
-            icon={<Truck size={20} />}
-            label="Arrivals"
-            value={String(arrivals.length)}
-            help="Stock batches received"
-            badge="Batches"
-            badgeClass="badge badge-green"
           />
 
           <MetricCard
             icon={<AlertTriangle size={20} />}
-            label="Damaged"
-            value={String(totalDamagedOnArrival)}
-            help="Items received damaged"
-            badge="Check"
-            badgeClass={
-              totalDamagedOnArrival > 0
-                ? "badge badge-orange"
-                : "badge badge-green"
-            }
+            label="Low stock"
+            value={String(stockSummary.lowStock)}
+            help="Products that are running low"
+            badge="Attention"
+            badgeClass={stockSummary.lowStock > 0 ? "badge badge-orange" : "badge badge-green"}
           />
 
           <MetricCard
-            icon={<CheckCircle2 size={20} />}
-            label="Stock value"
-            value={formatRwf(totalArrivalCost)}
-            help="Recorded value of received stock"
-            badge="Value"
-            badgeClass="badge badge-blue"
+            icon={<Package size={20} />}
+            label="Out of stock"
+            value={String(stockSummary.outOfStock)}
+            help="Products with no units available"
+            badge="Restock"
+            badgeClass={stockSummary.outOfStock > 0 ? "badge badge-orange" : "badge badge-green"}
           />
         </div>
 
@@ -519,220 +464,146 @@ export default function InventoryPage() {
         <section className={styles.listingPanel}>
           <div className={styles.listingTop}>
             <div>
-              <h2>Stock arrivals</h2>
-              <p>
-                Only the important proof: shipment, source, quantity, damage,
-                cost, and action.
-              </p>
+              <h2>Current stock</h2>
+              <p>Search a product and see its quantity, purchase cost, and status.</p>
             </div>
 
             {loading ? (
-              <Loader2
-                className="spin"
-                size={20}
-                style={{ color: "var(--orange)" }}
-              />
+              <Loader2 className="spin" size={20} style={{ color: "var(--orange)" }} />
             ) : null}
           </div>
 
-          <div className={styles.toolbar}>
+          <div className={styles.stockToolbar}>
             <div className={styles.searchBox}>
               <Search size={15} />
               <input
-                value={listSearch}
+                value={stockSearch}
                 onChange={(event) => {
-                  setListSearch(event.target.value);
-                  setVisibleArrivalsCount(8);
-                  setVisibleMovementsCount(8);
+                  setStockSearch(event.target.value);
+                  setVisibleStockCount(14);
                 }}
-                placeholder="Search shipment, source, user..."
+                placeholder="Search product, category, brand or model..."
               />
             </div>
 
-            <button
-              className="btn btn-outline"
-              type="button"
-              onClick={() => {
-                setListSearch("");
-                setVisibleArrivalsCount(8);
-                setVisibleMovementsCount(8);
-              }}
-            >
-              Clear
-            </button>
+            <div className={styles.filterGroup}>
+              <button
+                type="button"
+                className={cx(styles.filterButton, stockFilter === "all" && styles.activeFilter)}
+                onClick={() => {
+                  setStockFilter("all");
+                  setVisibleStockCount(14);
+                }}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={cx(styles.filterButton, stockFilter === "needs" && styles.activeFilter)}
+                onClick={() => {
+                  setStockFilter("needs");
+                  setVisibleStockCount(14);
+                }}
+              >
+                Needs stock
+              </button>
+            </div>
           </div>
 
           <div className={styles.responsiveList}>
-            <div className={styles.listHeader}>
-              <span>Shipment</span>
-              <span>Qty</span>
-              <span>Damage</span>
-              <span>Cost</span>
-              <span>Action</span>
+            <div className={styles.stockListHeader}>
+              <span>Product</span>
+              <span>Stock</span>
+              <span>Purchase cost</span>
+              <span>Stock value</span>
+              <span>Status</span>
             </div>
 
-            {visibleArrivals.map((arrival) => {
-              const damaged = Number(arrival.totalDamagedQuantity || 0);
+            {visibleProducts.map((product) => {
+              const quantity = Number(product.currentStock || 0);
+              const purchaseCost = product.buyingPriceRwf;
+              const isOut = quantity === 0;
+              const isLow = !isOut && quantity <= product.lowStockAlert;
 
               return (
-                <article key={arrival.id} className={styles.listRow}>
+                <article key={product.id} className={styles.stockListRow}>
                   <div className={styles.primaryCell}>
-                    <div className={styles.avatarIcon}>
-                      <Truck size={17} />
-                    </div>
-
                     <div>
-                      <strong>
-                        {arrival.shipmentReference || arrival.referenceCode}
-                      </strong>
-                      <span>
-                        {arrival.sourceName || "Unknown source"} ·{" "}
-                        {formatShortDate(arrival.receivedAt)}
-                      </span>
+                      <strong>{product.name}</strong>
+                      <span>{[product.categoryName, product.brand, product.model].filter(Boolean).join(" / ") || "Product"}</span>
                     </div>
                   </div>
 
-                  <div className={styles.dataCell}>
-                    <span>Qty</span>
-                    <strong>{arrival.totalQuantityReceived}</strong>
-                  </div>
+                  <div className={styles.dataCell}><span>Stock</span><strong>{quantity}</strong></div>
+                  <div className={styles.dataCell}><span>Purchase cost</span><strong>{purchaseCost == null ? "-" : formatRwf(purchaseCost)}</strong></div>
+                  <div className={styles.dataCell}><span>Stock value</span><strong>{purchaseCost == null ? "-" : formatRwf(quantity * purchaseCost)}</strong></div>
 
-                  <div className={styles.dataCell}>
-                    <span>Damage</span>
-                    <strong>{damaged}</strong>
-                  </div>
-
-                  <div className={styles.dataCell}>
-                    <span>Cost</span>
-                    <strong>{formatRwf(arrival.totalCostRwf)}</strong>
-                  </div>
-
-                  <div className={styles.actionCell}>
-                    <button
-                      type="button"
-                      onClick={() => openArrivalDetails(arrival)}
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
+                  <div className={styles.statusCell}>
+                    <span>Status</span>
+                    <strong className={cx(styles.stockStatus,isOut ? styles.outStatus : isLow ? styles.lowStatus : styles.inStatus)}>
+                      {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
+                    </strong>
                   </div>
                 </article>
               );
             })}
 
-            {filteredArrivals.length === 0 ? (
-              <EmptyCard
-                icon={<Truck size={22} />}
-                title="No stock arrivals found"
-                text="Receive stock first or search another shipment/source."
-              />
+            {!loading && filteredProducts.length === 0 ? (
+              <EmptyCard icon={<Search size={22} />} title="No products found" text="Try another search or stock filter." />
             ) : null}
           </div>
 
-          {filteredArrivals.length > visibleArrivalsCount ? (
-            <button
-              className={styles.loadMoreButton}
-              type="button"
-              onClick={() => setVisibleArrivalsCount((current) => current + 8)}
-            >
-              Load more arrivals
+          {filteredProducts.length > visibleStockCount ? (
+            <button className={styles.loadMoreButton} type="button" onClick={() => setVisibleStockCount((current) => current + 14)}>
+              Load more products
             </button>
           ) : null}
         </section>
 
-        <section className={styles.listingPanel}>
-          <div className={styles.listingTop}>
-            <div>
-              <h2>Latest stock changes</h2>
-              <p>
-                Simple audit trail: product, stock change, reason, and user.
-              </p>
+        {historyOpen ? (
+          <section className={styles.listingPanel}>
+            <div className={styles.listingTop}>
+              <div>
+                <h2>Stock history</h2>
+                <p>Open an entry only when you need to check what was received.</p>
+              </div>
+
+              <div className={styles.historyActions}>
+                {historyLoading ? <Loader2 className="spin" size={18} /> : null}
+                <button className="btn btn-outline btn-sm" type="button" onClick={() => setHistoryOpen(false)}>
+                  Hide history
+                </button>
+              </div>
             </div>
 
-            <span className="badge badge-blue">
-              {filteredMovements.length} record(s)
-            </span>
-          </div>
+            <div className={styles.responsiveList}>
+              <div className={styles.historyHeader}>
+                <span>Received</span><span>Qty</span><span>Damage</span><span>Cost</span><span>Action</span>
+              </div>
 
-          <div className={styles.responsiveList}>
-            <div className={styles.movementHeader}>
-              <span>Product</span>
-              <span>Change</span>
-              <span>Before → After</span>
-              <span>Reason</span>
-            </div>
-
-            {visibleMovements.map((movement) => (
-              <article key={movement.id} className={styles.movementRow}>
-                <div className={styles.primaryCell}>
-                  <div className={styles.avatarIcon}>
-                    <Package size={17} />
+              {arrivals.slice(0, 10).map((arrival) => (
+                <article key={arrival.id} className={styles.historyRow}>
+                  <div className={styles.primaryCell}>
+                    <div>
+                      <strong>{arrival.sourceName || "Stock received"}</strong>
+                      <span>{formatShortDate(arrival.receivedAt)}</span>
+                    </div>
                   </div>
-
-                  <div>
-                    <strong>{movement.productName}</strong>
-                    <span>
-                      {movement.actorName || "Unknown user"} ·{" "}
-                      {formatShortDate(movement.createdAt)}
-                    </span>
+                  <div className={styles.dataCell}><span>Qty</span><strong>{arrival.totalQuantityReceived}</strong></div>
+                  <div className={styles.dataCell}><span>Damage</span><strong>{arrival.totalDamagedQuantity}</strong></div>
+                  <div className={styles.dataCell}><span>Cost</span><strong>{formatRwf(arrival.totalCostRwf)}</strong></div>
+                  <div className={styles.actionCell}>
+                    <button type="button" onClick={() => openArrivalDetails(arrival)}><Eye size={14} />View</button>
                   </div>
-                </div>
+                </article>
+              ))}
 
-                <div className={styles.dataCell}>
-                  <span>Change</span>
-                  <strong
-                    className={
-                      movement.quantityChange >= 0
-                        ? styles.positiveValue
-                        : styles.negativeValue
-                    }
-                  >
-                    {movement.quantityChange > 0 ? "+" : ""}
-                    {movement.quantityChange}
-                  </strong>
-                </div>
-
-                <div className={styles.dataCell}>
-                  <span>Before → After</span>
-                  <strong>
-                    {movement.quantityBefore} → {movement.quantityAfter}
-                  </strong>
-                </div>
-
-                <div className={styles.reasonCell}>
-                  <span>Reason</span>
-                  <strong>{movement.reason || movement.movementType}</strong>
-                </div>
-              </article>
-            ))}
-
-            {filteredMovements.length === 0 ? (
-              <EmptyCard
-                icon={<Search size={22} />}
-                title="No stock movement found"
-                text="Stock changes will appear here after receiving or adjusting stock."
-              />
-            ) : null}
-          </div>
-
-          {filteredMovements.length > visibleMovementsCount ? (
-            <button
-              className={styles.loadMoreButton}
-              type="button"
-              onClick={() => setVisibleMovementsCount((current) => current + 8)}
-            >
-              Load more movements
-            </button>
-          ) : null}
-
-          {latestMovement ? (
-            <div className={styles.mobileHint}>
-              Latest: {latestMovement.productName} changed by{" "}
-              {latestMovement.quantityChange > 0 ? "+" : ""}
-              {latestMovement.quantityChange}.
+              {!historyLoading && historyLoaded && arrivals.length === 0 ? (
+                <EmptyCard icon={<History size={22} />} title="No stock history yet" text="Received stock will appear here." />
+              ) : null}
             </div>
-          ) : null}
-        </section>
+          </section>
+        ) : null}
 
         {arrivalModalOpen ? (
           <div className="staff-modal-backdrop">
@@ -743,10 +614,9 @@ export default function InventoryPage() {
                     <Truck size={22} />
                   </div>
 
-                  <h2>Receive new stock</h2>
+                  <h2>Receive stock</h2>
                   <p>
-                    Add products received. Damaged items are recorded
-                    separately.
+                    Search products and record what was actually received.
                   </p>
                 </div>
 
@@ -760,73 +630,14 @@ export default function InventoryPage() {
               </div>
 
               <form onSubmit={handleCreateArrival} className="staff-modal-body">
-                <div className={styles.modalGrid}>
-                  <label className="staff-form-group">
-                    <span>Source</span>
-                    <input
-                      value={sourceName}
-                      onChange={(event) => setSourceName(event.target.value)}
-                      placeholder="Example: Dubai shipment"
-                    />
-                  </label>
-
-                  <label className="staff-form-group">
-                    <span>Shipment reference</span>
-                    <input
-                      value={shipmentReference}
-                      readOnly
-                      placeholder="Auto-generated"
-                    />
-                  </label>
-                </div>
-
                 <label className="staff-form-group">
-                  <span>Notes</span>
-                  <textarea
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Example: Items received by trusted employee."
+                  <span>Supplier / source (optional)</span>
+                  <input
+                    value={sourceName}
+                    onChange={(event) => setSourceName(event.target.value)}
+                    placeholder="Supplier or location"
                   />
                 </label>
-
-                <section className={styles.arrivalSummaryBox}>
-                  <div className={styles.summaryHeader}>
-                    <div>
-                      <div className="staff-form-section-title">
-                        Arrival summary
-                      </div>
-                      <p>Confirm received, sellable, damaged, and cost.</p>
-                    </div>
-
-                    <span className="badge badge-blue">
-                      {items.length} item row(s)
-                    </span>
-                  </div>
-
-                  <div className={styles.miniGrid}>
-                    <MiniInfo
-                      label="Received"
-                      value={`${arrivalFormTotals.received} unit(s)`}
-                      tone="success"
-                    />
-                    <MiniInfo
-                      label="Sellable"
-                      value={`${arrivalFormTotals.sellable} unit(s)`}
-                      tone="success"
-                    />
-                    <MiniInfo
-                      label="Damaged"
-                      value={`${arrivalFormTotals.damaged} damaged`}
-                      tone={
-                        arrivalFormTotals.damaged > 0 ? "warning" : "success"
-                      }
-                    />
-                    <MiniInfo
-                      label="Cost"
-                      value={formatRwf(arrivalFormTotals.cost)}
-                    />
-                  </div>
-                </section>
 
                 <section>
                   <div className={styles.sectionTop}>
@@ -845,64 +656,113 @@ export default function InventoryPage() {
                   </div>
 
                   <div className={styles.itemStack}>
-                    {items.map((item, index) => {
+                    {items.map((item) => {
                       const product = products.find(
                         (productItem) => productItem.id === item.productId,
                       );
-
-                      const quantityReceived = Number(
-                        item.quantityReceived || 0,
+                      const searchTerm = item.productSearch.trim().toLowerCase();
+                      const selectedElsewhere = new Set(
+                        items
+                          .filter((otherItem) => otherItem.rowId !== item.rowId)
+                          .map((otherItem) => otherItem.productId)
+                          .filter(Boolean),
                       );
-                      const damagedQuantity = Number(item.damagedQuantity || 0);
-                      const sellableQuantity = Math.max(
-                        0,
-                        quantityReceived - damagedQuantity,
-                      );
-                      const totalCost =
-                        quantityReceived * Number(item.unitCostRwf || 0);
+                      const productMatches = searchTerm && !item.productId
+                        ? activeProducts
+                            .filter(
+                              (productItem) => !selectedElsewhere.has(productItem.id),
+                            )
+                            .filter((productItem) =>
+                              [
+                                productItem.name,
+                                productItem.categoryName,
+                                productItem.brand,
+                                productItem.model,
+                              ]
+                                .filter(Boolean)
+                                .join(" ")
+                                .toLowerCase()
+                                .includes(searchTerm),
+                            )
+                            .slice(0, 6)
+                        : [];
 
                       return (
                         <article key={item.rowId} className={styles.itemCard}>
-                          <div className={styles.itemCardTop}>
-                            <strong>Item {index + 1}</strong>
+                          {items.length > 1 ? (
+                            <div className={styles.itemCardTop}>
+                              <strong>{product?.name || "Product"}</strong>
 
-                            <button
-                              type="button"
-                              className="btn btn-red-outline btn-sm"
-                              onClick={() => removeItemRow(item.rowId)}
-                              disabled={items.length === 1}
-                            >
-                              <Trash2 size={13} />
-                              Remove
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                onClick={() => removeItemRow(item.rowId)}
+                              >
+                                <Trash2 size={13} />
+                                Remove
+                              </button>
+                            </div>
+                          ) : null}
 
                           <div className={styles.itemFormGrid}>
-                            <label className="staff-form-group">
-                              <span>Product</span>
-                              <select
-                                value={item.productId}
-                                onChange={(event) =>
-                                  updateItem(
-                                    item.rowId,
-                                    "productId",
-                                    event.target.value,
-                                  )
-                                }
-                                required
-                              >
-                                <option value="">Choose product</option>
-                                {activeProducts.map((productItem) => (
-                                  <option
-                                    key={productItem.id}
-                                    value={productItem.id}
-                                  >
-                                    {productItem.name} · {productItem.sku} ·
-                                    Stock: {productItem.currentStock}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <div className={styles.productPicker}>
+                              <label className="staff-form-group">
+                                <span>Product</span>
+                                <div className={styles.productSearchField}>
+                                  <Search size={15} />
+                                  <input
+                                    value={item.productSearch}
+                                    onChange={(event) =>
+                                      updateProductSearch(
+                                        item.rowId,
+                                        event.target.value,
+                                      )
+                                    }
+                                    placeholder="Search product name, category or brand..."
+                                    autoComplete="off"
+                                  />
+                                </div>
+                              </label>
+
+                              {productMatches.length > 0 ? (
+                                <div className={styles.productResults}>
+                                  {productMatches.map((productItem) => (
+                                    <button
+                                      key={productItem.id}
+                                      type="button"
+                                      onClick={() =>
+                                        chooseProduct(item.rowId, productItem)
+                                      }
+                                    >
+                                      <span>
+                                        <strong>{productItem.name}</strong>
+                                        <small>
+                                          {[
+                                            productItem.categoryName,
+                                            productItem.brand,
+                                            productItem.model,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(" / ") || "Product"}
+                                        </small>
+                                      </span>
+                                      <em>Stock: {productItem.currentStock}</em>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : searchTerm && !item.productId ? (
+                                <div className={styles.noProductResult}>
+                                  No matching product
+                                </div>
+                              ) : null}
+
+                              {product ? (
+                                <div className={styles.selectedProduct}>
+                                  <span>Selected</span>
+                                  <strong>Current stock: {product.currentStock}</strong>
+                                </div>
+                              ) : null}
+                            </div>
 
                             <label className="staff-form-group">
                               <span>Quantity received</span>
@@ -922,7 +782,7 @@ export default function InventoryPage() {
                             </label>
 
                             <label className="staff-form-group">
-                              <span>Damaged quantity</span>
+                              <span>Damaged on arrival</span>
                               <input
                                 type="number"
                                 value={item.damagedQuantity}
@@ -938,11 +798,12 @@ export default function InventoryPage() {
                             </label>
 
                             <label className="staff-form-group">
-                              <span>Unit cost</span>
+                              <span>Purchase cost / unit</span>
                               <input
                                 type="number"
                                 value={item.unitCostRwf}
-                                min={0}
+                                min={1}
+                                placeholder="Enter purchase cost"
                                 onChange={(event) =>
                                   updateItem(
                                     item.rowId,
@@ -950,52 +811,26 @@ export default function InventoryPage() {
                                     event.target.value,
                                   )
                                 }
+                                required
                               />
                             </label>
                           </div>
 
-                          <label className="staff-form-group">
-                            <span>Item note</span>
-                            <input
-                              value={item.note}
-                              onChange={(event) =>
-                                updateItem(
-                                  item.rowId,
-                                  "note",
-                                  event.target.value,
-                                )
-                              }
-                              placeholder="Example: 2 pieces damaged on arrival"
-                            />
-                          </label>
-
-                          <div className={styles.badgeRow}>
-                            <span className="badge badge-green">
-                              Sellable: {sellableQuantity}
-                            </span>
-                            <span
-                              className={
-                                damagedQuantity > 0
-                                  ? "badge badge-orange"
-                                  : "badge badge-green"
-                              }
-                            >
-                              Damaged: {damagedQuantity}
-                            </span>
-                            <span className="badge badge-blue">
-                              Cost: {formatRwf(totalCost)}
-                            </span>
-                            {product ? (
-                              <span className="badge badge-blue">
-                                Current stock: {product.currentStock}
-                              </span>
-                            ) : null}
-                          </div>
                         </article>
                       );
                     })}
                   </div>
                 </section>
+
+                <div className={styles.receiveSummary}>
+                  <span>
+                    {selectedProductCount} {selectedProductCount === 1 ? "product" : "products"}
+                  </span>
+                  <span>
+                    {arrivalFormTotals.received} {arrivalFormTotals.received === 1 ? "unit" : "units"}
+                  </span>
+                  <strong>{formatRwf(arrivalFormTotals.cost)}</strong>
+                </div>
 
                 <div className="staff-modal-footer">
                   <button
@@ -1008,7 +843,7 @@ export default function InventoryPage() {
 
                   <AsyncButton loading={saving} type="submit">
                     <Plus size={15} />
-                    Save stock
+                    Receive stock
                   </AsyncButton>
                 </div>
               </form>

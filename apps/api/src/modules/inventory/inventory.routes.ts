@@ -26,7 +26,7 @@ const createArrivalSchema = z.object({
         productId: z.string().uuid(),
         quantityReceived: z.coerce.number().int().min(1),
         damagedQuantity: z.coerce.number().int().min(0).default(0),
-        unitCostRwf: z.coerce.number().int().min(0).default(0),
+        unitCostRwf: z.coerce.number().int().min(1, "Purchase cost must be greater than zero."),
         note: z.string().optional(),
       }),
     )
@@ -42,21 +42,6 @@ const movementQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-const MONTH_CODES = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
-];
-
 function makeArrivalReference() {
   const date = new Date();
   const y = date.getFullYear();
@@ -68,10 +53,11 @@ function makeArrivalReference() {
 }
 
 function makeShipmentPrefix(date = new Date()) {
-  const month = MONTH_CODES[date.getMonth()];
   const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-  return `DXB-${month}-${year}`;
+  return `STK-${year}${month}${day}`;
 }
 
 async function makeNextShipmentReference(date = new Date()) {
@@ -230,11 +216,17 @@ export async function inventoryRoutes(app: FastifyInstance) {
           if (sellableQuantity > 0) {
             const quantityBefore = product.currentStock;
             const quantityAfter = quantityBefore + sellableQuantity;
+            const inventoryValueBefore = quantityBefore * product.buyingPriceRwf;
+            const receivedInventoryValue = sellableQuantity * item.unitCostRwf;
+            const averageBuyingPriceRwf = Math.round(
+              (inventoryValueBefore + receivedInventoryValue) / quantityAfter,
+            );
 
             await tx
               .update(products)
               .set({
                 currentStock: quantityAfter,
+                buyingPriceRwf: averageBuyingPriceRwf,
                 updatedAt: new Date(),
               })
               .where(eq(products.id, product.id));
